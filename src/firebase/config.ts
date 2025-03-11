@@ -2,20 +2,20 @@ import { initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
-// Firebase configuration provided by the user
+// Konfigurasi Firebase
 const firebaseConfig = {
-  apiKey: "AIzaSyBX_qnWNYHIqN3YquQKmmM7lMNjK3O62Ls",
-  authDomain: "manajemen-turnamen.firebaseapp.com",
-  projectId: "manajemen-turnamen",
-  storageBucket: "manajemen-turnamen.firebasestorage.app",
-  messagingSenderId: "873449207450",
-  appId: "1:873449207450:web:a80175d6aeeb35211a9123"
+  apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
+  authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.REACT_APP_FIREBASE_APP_ID
 };
 
-// Initialize Firebase
+// Inisialisasi Firebase
 const app = initializeApp(firebaseConfig);
 
-// Initialize Firestore
+// Inisialisasi Firestore
 export const db = getFirestore(app);
 
 // Initialize Storage

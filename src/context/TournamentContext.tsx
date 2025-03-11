@@ -12,8 +12,12 @@ import {
   addMatchToFirestore,
   addGoalToFirestore,
   addCardToFirestore,
-  deleteMatchFromFirestore
+  deleteMatchFromFirestore,
+  writeBatch,
+  doc,
+  collection
 } from '../firebase/firestore';
+import { db } from '../firebase/config';
 
 // Types
 export interface Player {
@@ -620,146 +624,62 @@ export const TournamentProvider = ({ children }: { children: any }) => {
   // Match functions
   const generateSchedule = async (startDateStr: string = '') => {
     try {
-      setLoading(true);
+      const batch = writeBatch(db);
+      const startDate = new Date(startDateStr || new Date());
+      const matchPromises = [];
       
-      // Gunakan tanggal yang diberikan atau default ke hari ini
-      let startDate = startDateStr ? new Date(startDateStr) : new Date();
-      
-      // Pastikan startDate valid
-      if (isNaN(startDate.getTime())) {
-        startDate = new Date();
-      }
-      
-      // Hapus jadwal yang ada terlebih dahulu
-      await clearSchedule();
-      
-      // Grup tim berdasarkan grup
-      const teamsByGroup: Record<string, Team[]> = {};
-      teams.forEach(team => {
-        if (!teamsByGroup[team.group]) {
-          teamsByGroup[team.group] = [];
-        }
-        teamsByGroup[team.group].push(team);
-      });
-
-      const matchesToCreate: Omit<Match, 'id' | 'goals' | 'cards'>[] = [];
-      let currentDate = startDate.toISOString().split('T')[0];
-      
-      // Buat jadwal untuk setiap grup
-      const allGroups = Object.keys(teamsByGroup).sort();
-      
-      // Buat jadwal round-robin untuk setiap grup
-      const matchesByGroup: Record<string, [string, string][]> = {};
-      for (const group of allGroups) {
-        matchesByGroup[group] = generateRoundRobinSchedule(teamsByGroup[group], group);
-      }
-      
-      // Distribusikan pertandingan ke dalam slot harian
-      let currentSlotIndex = 0;
-      let currentGroup = 0;
-      
-      // Terus jadwalkan sampai semua pertandingan terjadwal
-      while (Object.values(matchesByGroup).some(matches => matches.length > 0)) {
-        // Pilih grup berikutnya yang masih memiliki pertandingan
-        while (matchesByGroup[allGroups[currentGroup]].length === 0) {
-          currentGroup = (currentGroup + 1) % allGroups.length;
-        }
+      // Buat jadwal untuk setiap grup secara paralel
+      for (const group of ['A', 'B', 'C', 'D']) {
+        const teamsInGroup = teams.filter(team => team.group === group);
         
-        const group = allGroups[currentGroup];
+        if (teamsInGroup.length < 2) continue;
         
-        // Ambil pertandingan berikutnya dari grup ini
-        const [homeTeamId, awayTeamId] = matchesByGroup[group].shift()!;
-        const homeTeam = teamsByGroup[group].find(t => t.id === homeTeamId)!;
-        const awayTeam = teamsByGroup[group].find(t => t.id === awayTeamId)!;
+        // Generate round-robin matches
+        const matches = generateRoundRobinSchedule(teamsInGroup, group);
         
-        // Cek apakah tim dapat bermain pada tanggal ini
-        let canSchedule = canScheduleMatch(
-          homeTeam,
-          awayTeam,
-          currentDate,
-          MATCH_SLOTS[currentSlotIndex].time,
-          matchesToCreate
-        );
-        
-        // Jika tidak bisa dijadwalkan, coba tanggal berikutnya
-        let attempts = 0;
-        const maxAttempts = 30; // Batasi jumlah percobaan
-        
-        while (!canSchedule && attempts < maxAttempts) {
-          // Coba slot berikutnya
-          currentSlotIndex = (currentSlotIndex + 1) % MATCH_SLOTS.length;
+        // Bagi matches menjadi batch yang lebih kecil
+        const batchSize = 5;
+        for (let i = 0; i < matches.length; i += batchSize) {
+          const batchMatches = matches.slice(i, i + batchSize);
           
-          // Jika kembali ke slot pertama, pindah ke hari berikutnya
-          if (currentSlotIndex === 0) {
-            const nextDate = new Date(currentDate);
-            nextDate.setDate(nextDate.getDate() + 1);
-            currentDate = nextDate.toISOString().split('T')[0];
-          }
+          // Proses setiap batch secara paralel
+          const batchPromise = Promise.all(batchMatches.map(async ([homeTeamId, awayTeamId], index) => {
+            const matchDate = new Date(startDate);
+            matchDate.setDate(startDate.getDate() + Math.floor(i / 2));
+            
+            const match: Omit<Match, 'id' | 'goals' | 'cards'> = {
+              homeTeamId,
+              awayTeamId,
+              date: matchDate.toISOString().split('T')[0],
+              time: index % 2 === 0 ? '15:30' : '19:30',
+              venue: 'Lapangan KARTA',
+              group,
+              round: Math.floor(i / teamsInGroup.length) + 1,
+              status: 'scheduled'
+            };
+            
+            const matchRef = doc(collection(db, 'matches'));
+            batch.set(matchRef, match);
+            return match;
+          }));
           
-          canSchedule = canScheduleMatch(
-            homeTeam,
-            awayTeam,
-            currentDate,
-            MATCH_SLOTS[currentSlotIndex].time,
-            matchesToCreate
-          );
-          
-          attempts++;
+          matchPromises.push(batchPromise);
         }
-        
-        if (!canSchedule) {
-          // Jika masih tidak bisa dijadwalkan setelah banyak percobaan, 
-          // kembalikan pertandingan ke daftar dan lanjutkan ke grup berikutnya
-          matchesByGroup[group].push([homeTeamId, awayTeamId]);
-          currentGroup = (currentGroup + 1) % allGroups.length;
-          continue;
-        }
-        
-        // Buat pertandingan
-        const match: Omit<Match, 'id'> = {
-          homeTeamId,
-          awayTeamId,
-          date: currentDate,
-          time: MATCH_SLOTS[currentSlotIndex].time,
-          venue: 'Lapangan Utama',
-          group,
-          round: 1, // Semua pertandingan dianggap ronde 1 untuk sederhananya
-          status: 'scheduled',
-          goals: [],
-          cards: []
-        };
-        
-        matchesToCreate.push(match);
-        
-        // Pindah ke slot berikutnya
-        currentSlotIndex = (currentSlotIndex + 1) % MATCH_SLOTS.length;
-        
-        // Jika kembali ke slot pertama, pindah ke hari berikutnya
-        if (currentSlotIndex === 0) {
-          const nextDate = new Date(currentDate);
-          nextDate.setDate(nextDate.getDate() + 1);
-          currentDate = nextDate.toISOString().split('T')[0];
-        }
-        
-        // Pindah ke grup berikutnya untuk distribusi yang merata
-        currentGroup = (currentGroup + 1) % allGroups.length;
       }
       
-      // Simpan semua pertandingan ke Firestore
-      for (const match of matchesToCreate) {
-        await addMatchToFirestore(match);
-      }
+      // Tunggu semua batch selesai
+      await Promise.all(matchPromises);
       
-      // Muat ulang pertandingan
+      // Commit batch ke Firestore
+      await batch.commit();
+      
+      // Refresh data
       const updatedMatches = await fetchMatches();
       setMatches(updatedMatches);
       
-      console.log(`Berhasil membuat ${matchesToCreate.length} pertandingan`);
     } catch (error) {
-      console.error('Error generating match schedule:', error);
+      console.error('Error generating schedule:', error);
       throw error;
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -941,52 +861,6 @@ export const TournamentProvider = ({ children }: { children: any }) => {
     
     const topScorersList = Object.values(scorers).sort((a, b) => b.goals - a.goals);
     setTopScorers(topScorersList);
-  };
-
-  // Fungsi untuk memeriksa apakah tim dapat dijadwalkan pada tanggal dan waktu tertentu
-  const canScheduleMatch = (
-    homeTeam: Team,
-    awayTeam: Team,
-    date: string,
-    time: string,
-    existingMatches: Omit<Match, 'id' | 'goals' | 'cards'>[]
-  ): boolean => {
-    // Cek apakah salah satu tim sudah bermain pada tanggal yang sama
-    const isHomeTeamPlayingOnDate = isTeamPlayingOnDate(homeTeam, date, existingMatches);
-    const isAwayTeamPlayingOnDate = isTeamPlayingOnDate(awayTeam, date, existingMatches);
-    
-    if (isHomeTeamPlayingOnDate || isAwayTeamPlayingOnDate) {
-      return false;
-    }
-    
-    // Cek apakah salah satu tim bermain pada hari sebelumnya atau hari berikutnya
-    const isHomeTeamPlayingConsecutive = isTeamPlayingConsecutiveDays(homeTeam, date, existingMatches);
-    const isAwayTeamPlayingConsecutive = isTeamPlayingConsecutiveDays(awayTeam, date, existingMatches);
-    
-    if (isHomeTeamPlayingConsecutive || isAwayTeamPlayingConsecutive) {
-      return false;
-    }
-    
-    // Cek keseimbangan istirahat
-    const homeTeamRestDays = getTeamRestDays(homeTeam, existingMatches);
-    const awayTeamRestDays = getTeamRestDays(awayTeam, existingMatches);
-    
-    // Jika tim belum memiliki pertandingan, mereka dapat dijadwalkan
-    if (homeTeamRestDays.length === 0 || awayTeamRestDays.length === 0) {
-      return true;
-    }
-    
-    // Hitung rata-rata hari istirahat
-    const avgHomeRestDays = homeTeamRestDays.reduce((sum, days) => sum + days, 0) / homeTeamRestDays.length;
-    const avgAwayRestDays = awayTeamRestDays.reduce((sum, days) => sum + days, 0) / awayTeamRestDays.length;
-    
-    // Pastikan perbedaan rata-rata hari istirahat tidak terlalu besar
-    const restDaysDiff = Math.abs(avgHomeRestDays - avgAwayRestDays);
-    if (restDaysDiff > 5) { // Toleransi perbedaan 5 hari
-      return false;
-    }
-    
-    return true;
   };
 
   const value = {
