@@ -161,7 +161,6 @@ const Teams = () => {
     
     setUploadingPlayerPhoto(true);
     try {
-      // Kompres dan konversi file gambar ke base64
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.readAsDataURL(file);
@@ -171,12 +170,11 @@ const Teams = () => {
           img.src = reader.result as string;
           
           img.onload = () => {
-            // Kompres gambar
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
             
-            // Tentukan ukuran maksimum (500px untuk dimensi terpanjang)
-            const MAX_SIZE = 500;
+            // Ukuran maksimum yang lebih kecil (300px)
+            const MAX_SIZE = 300;
             let width = img.width;
             let height = img.height;
             
@@ -192,14 +190,29 @@ const Teams = () => {
               }
             }
             
+            // Pastikan ukuran minimum
+            const MIN_SIZE = 50;
+            if (width < MIN_SIZE) {
+              height = Math.round(height * (MIN_SIZE / width));
+              width = MIN_SIZE;
+            }
+            if (height < MIN_SIZE) {
+              width = Math.round(width * (MIN_SIZE / height));
+              height = MIN_SIZE;
+            }
+            
             canvas.width = width;
             canvas.height = height;
             
-            // Gambar ke canvas dengan ukuran yang sudah dikompres
-            ctx?.drawImage(img, 0, 0, width, height);
+            // Tambahkan background putih untuk gambar PNG transparan
+            if (ctx) {
+              ctx.fillStyle = '#FFFFFF';
+              ctx.fillRect(0, 0, width, height);
+              ctx.drawImage(img, 0, 0, width, height);
+            }
             
-            // Konversi ke base64 dengan kualitas 0.7 (70%)
-            const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+            // Kompresi yang lebih agresif (65%)
+            const compressedBase64 = canvas.toDataURL('image/jpeg', 0.65);
             
             setUploadingPlayerPhoto(false);
             resolve(compressedBase64);
@@ -207,22 +220,22 @@ const Teams = () => {
           
           img.onerror = () => {
             console.error('Error loading image for compression');
-            alert('Gagal memproses foto pemain. Silakan coba lagi.');
+            setErrorMessage('Gagal memproses foto pemain. Silakan coba lagi.');
             setUploadingPlayerPhoto(false);
             reject(null);
           };
         };
         
         reader.onerror = (error) => {
-          console.error('Error converting player photo to base64:', error);
-          alert('Gagal memproses foto pemain. Silakan coba lagi.');
+          console.error('Error reading file:', error);
+          setErrorMessage('Gagal membaca file foto. Silakan coba lagi.');
           setUploadingPlayerPhoto(false);
           reject(null);
         };
       });
     } catch (error) {
-      console.error('Error handling player photo:', error);
-      alert('Gagal memproses foto pemain. Silakan coba lagi.');
+      console.error('Error in player photo upload:', error);
+      setErrorMessage('Terjadi kesalahan saat mengunggah foto pemain.');
       setUploadingPlayerPhoto(false);
       return null;
     }
