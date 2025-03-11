@@ -9,6 +9,7 @@ import Matches from './pages/Matches';
 import MatchDetail from './pages/MatchDetail';
 import Standings from './pages/Standings';
 import Statistics from './pages/Statistics';
+import Schedule from './pages/Schedule';
 
 import './index.css';
 
@@ -25,6 +26,7 @@ function App() {
             <Route path="/matches/:id" element={<MatchDetail />} />
             <Route path="/standings" element={<Standings />} />
             <Route path="/statistics" element={<Statistics />} />
+            <Route path="/schedule" element={<Schedule />} />
           </Routes>
         </Layout>
       </Router>

@@ -10,6 +10,7 @@ const Header = () => {
     { path: '/', label: 'Dashboard' },
     { path: '/teams', label: 'Tim' },
     { path: '/matches', label: 'Pertandingan' },
+    { path: '/schedule', label: 'Jadwal' },
     { path: '/standings', label: 'Klasemen' },
     { path: '/statistics', label: 'Statistik' },
   ];
