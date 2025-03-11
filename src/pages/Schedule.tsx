@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import { useTournament } from '../context/TournamentContext';
-import { Squircle, Calendar, ChevronDown, Clock, MapPin, Play, Plus } from 'lucide-react';
+import { Squircle, Calendar, ChevronDown, Clock, MapPin, Play, Plus, X, Trash2 } from 'lucide-react';
 
 const Schedule = () => {
-  const { teams, matches, generateSchedule, updateMatch } = useTournament();
+  const { teams, matches, generateSchedule, updateMatch, clearSchedule } = useTournament();
   const [activeGroup, setActiveGroup] = useState<string | null>(null);
   const [editingMatch, setEditingMatch] = useState<string | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   // Group matches by group for display
   const groupedMatches: Record<string, typeof matches> = {};
@@ -48,6 +51,19 @@ const Schedule = () => {
     }
   };
 
+  const handleDeleteSchedule = async () => {
+    try {
+      setIsDeleting(true);
+      await clearSchedule();
+      setShowDeleteConfirm(false);
+    } catch (error) {
+      console.error('Error deleting schedule:', error);
+      alert('Gagal menghapus jadwal. Silakan coba lagi.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -59,14 +75,66 @@ const Schedule = () => {
           <p className="text-gray-600">Kelola jadwal pertandingan turnamen Karta Cup V</p>
         </div>
         
-        <button
-          onClick={handleGenerateSchedule}
-          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center"
-        >
-          <Play className="w-5 h-5 mr-1" />
-          {matches.length > 0 ? 'Regenerasi Jadwal' : 'Buat Jadwal Otomatis'}
-        </button>
+        <div className="flex gap-2">
+          {matches.length > 0 && (
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center"
+            >
+              <Trash2 className="w-5 h-5 mr-1" />
+              Hapus Jadwal
+            </button>
+          )}
+          <button
+            onClick={handleGenerateSchedule}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center"
+          >
+            <Play className="w-5 h-5 mr-1" />
+            {matches.length > 0 ? 'Regenerasi Jadwal' : 'Buat Jadwal Otomatis'}
+          </button>
+        </div>
       </div>
+
+      {/* Delete confirmation modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
+            <div className="flex items-center mb-4 text-red-600">
+              <Trash2 className="w-6 h-6 mr-2" />
+              <h2 className="text-xl font-semibold">Konfirmasi Hapus</h2>
+            </div>
+            <p className="mb-4">
+              Apakah Anda yakin ingin menghapus semua jadwal pertandingan? Tindakan ini tidak dapat dibatalkan.
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-100"
+                disabled={isDeleting}
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleDeleteSchedule}
+                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 flex items-center"
+                disabled={isDeleting}
+              >
+                {isDeleting ? (
+                  <>
+                    <span className="animate-spin mr-1">⏳</span>
+                    Menghapus...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4 mr-1" />
+                    Hapus Jadwal
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Confirm modal */}
       {showConfirm && (

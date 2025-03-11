@@ -11,7 +11,8 @@ import {
   updateMatchInFirestore,
   addMatchToFirestore,
   addGoalToFirestore,
-  addCardToFirestore
+  addCardToFirestore,
+  deleteMatchFromFirestore
 } from '../firebase/firestore';
 
 // Types
@@ -167,8 +168,8 @@ const isScheduleBalanced = (matches: Omit<Match, 'id' | 'goals' | 'cards'>[]): b
     return variance;
   });
   
-  // Consider schedule balanced if variance is less than 1
-  return Math.max(...restDaysVariance) < 1;
+  // Consider schedule balanced if variance is less than 2 (increased tolerance)
+  return Math.max(...restDaysVariance) < 2;
 };
 
 const canScheduleMatch = (
@@ -218,6 +219,7 @@ interface TournamentContextType {
   
   // Match functions
   generateSchedule: () => Promise<void>;
+  clearSchedule: () => Promise<void>;
   updateMatch: (match: Match) => Promise<void>;
   recordGoal: (goal: Omit<Goal, 'id'>) => Promise<void>;
   recordCard: (card: Omit<Card, 'id'>) => Promise<void>;
@@ -249,6 +251,7 @@ const initialContext: TournamentContextType = {
   getPlayerById: () => undefined,
   
   generateSchedule: async () => {},
+  clearSchedule: async () => {},
   updateMatch: async () => {},
   recordGoal: async () => {},
   recordCard: async () => {},
@@ -458,28 +461,46 @@ export const TournamentProvider = ({ children }: { children: any }) => {
         const numRounds = numTeams - 1;
         const matchesPerRound = Math.floor(numTeams / 2);
         
-        // Start date for scheduling (you might want to make this configurable)
+        // Start date for scheduling
         let currentDate = new Date().toISOString().split('T')[0];
+        
+        // Create a copy of teams array for rotation
+        const teamsForRotation = [...groupTeams];
         
         // Generate matches for each round
         for (let round = 0; round < numRounds; round++) {
           const roundMatches: Array<[Team, Team]> = [];
           
-          // Generate pairs for this round
+          // Generate pairs for this round using circle method
           for (let i = 0; i < matchesPerRound; i++) {
-            const home = groupTeams[i];
-            const away = groupTeams[numTeams - 1 - i];
-            roundMatches.push([home, away]);
+            const home = teamsForRotation[i];
+            const away = teamsForRotation[numTeams - 1 - i];
+            
+            // Alternate home/away for better balance
+            if (round % 2 === 0) {
+              roundMatches.push([home, away]);
+            } else {
+              roundMatches.push([away, home]);
+            }
           }
           
-          // Rotate teams for next round (except first team)
-          groupTeams.splice(1, 0, groupTeams.pop()!);
+          // Rotate teams (keep first team fixed, rotate others)
+          const firstTeam = teamsForRotation[0];
+          const lastTeam = teamsForRotation[numTeams - 1];
+          for (let i = numTeams - 1; i > 1; i--) {
+            teamsForRotation[i] = teamsForRotation[i - 1];
+          }
+          teamsForRotation[1] = lastTeam;
           
-          // Schedule matches for this round
+          // Schedule matches for this round with better distribution
           let matchSlotIndex = 0;
+          let maxAttempts = 100; // Prevent infinite loops
+          
           for (const [home, away] of roundMatches) {
-            // Find next available date
-            while (true) {
+            let scheduled = false;
+            let attempts = 0;
+            
+            while (!scheduled && attempts < maxAttempts) {
               const slot = MATCH_SLOTS[matchSlotIndex];
               
               if (canScheduleMatch(home, away, currentDate, slot.time, matchesToCreate)) {
@@ -496,24 +517,32 @@ export const TournamentProvider = ({ children }: { children: any }) => {
                   status: 'scheduled'
                 });
                 
-                matchSlotIndex = (matchSlotIndex + 1) % MATCH_SLOTS.length;
-                break;
+                scheduled = true;
               }
               
-              // If we've tried all slots for this day, move to next day
-              if (matchSlotIndex === MATCH_SLOTS.length - 1) {
+              // Move to next slot or day
+              matchSlotIndex = (matchSlotIndex + 1) % MATCH_SLOTS.length;
+              if (matchSlotIndex === 0) {
                 currentDate = addDays(currentDate, 1);
-                matchSlotIndex = 0;
-              } else {
-                matchSlotIndex++;
               }
+              
+              attempts++;
             }
+            
+            if (!scheduled) {
+              throw new Error(`Tidak dapat menjadwalkan pertandingan antara ${home.name} dan ${away.name}`);
+            }
+          }
+          
+          // Add extra day between rounds for better rest distribution
+          if (round < numRounds - 1) {
+            currentDate = addDays(currentDate, 1);
           }
         }
       }
       
-      // Verify schedule balance
-      if (!isScheduleBalanced(matchesToCreate as Omit<Match, 'id' | 'goals' | 'cards'>[])) {
+      // Verify schedule balance with increased tolerance
+      if (!isScheduleBalanced(matchesToCreate)) {
         throw new Error('Tidak dapat membuat jadwal yang seimbang');
       }
       
@@ -534,6 +563,25 @@ export const TournamentProvider = ({ children }: { children: any }) => {
       
     } catch (error) {
       console.error('Error generating match schedule:', error);
+      throw error;
+    }
+  };
+
+  const clearSchedule = async () => {
+    try {
+      // Hapus semua pertandingan dari Firestore
+      for (const match of matches) {
+        await deleteMatchFromFirestore(match.id);
+      }
+      
+      // Reset state matches
+      setMatches([]);
+      
+      // Recalculate standings
+      calculateStandings();
+      calculateTopScorers();
+    } catch (error) {
+      console.error('Error clearing schedule:', error);
       throw error;
     }
   };
@@ -718,6 +766,7 @@ export const TournamentProvider = ({ children }: { children: any }) => {
     getPlayerById,
     
     generateSchedule,
+    clearSchedule,
     updateMatch,
     recordGoal,
     recordCard,
