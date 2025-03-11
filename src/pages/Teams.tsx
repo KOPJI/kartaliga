@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTournament, Team } from '../context/TournamentContext';
-import { Pencil, Plus, Search, UserPlus, Users, X, Trash2, Loader } from 'lucide-react';
+import { Pencil, Plus, Search, UserPlus, Users, X, Trash2, Loader, Check } from 'lucide-react';
 
 const Teams = () => {
   const navigate = useNavigate();
-  const { teams, addTeam, addPlayer, deleteTeam } = useTournament();
+  const { teams, addTeam, addPlayer, deleteTeam, loading } = useTournament();
   const [isAddingTeam, setIsAddingTeam] = useState(false);
   const [newTeam, setNewTeam] = useState({ name: '', group: 'A', logo: '' });
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -22,6 +22,18 @@ const Teams = () => {
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [teamToDelete, setTeamToDelete] = useState<Team | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+
+  // Menampilkan pesan sukses ketika data berhasil diambil
+  useEffect(() => {
+    if (!loading && teams.length > 0) {
+      setShowSuccessMessage(true);
+      const timer = setTimeout(() => {
+        setShowSuccessMessage(false);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [loading, teams]);
 
   const handleLogoUpload = async (file: File) => {
     if (!file) return;
@@ -169,6 +181,22 @@ const Teams = () => {
           Tambah Tim
         </button>
       </div>
+      
+      {/* Loading indicator */}
+      {loading && (
+        <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-md flex items-center">
+          <Loader className="w-5 h-5 mr-2 animate-spin" />
+          <span>Memuat data tim dari database...</span>
+        </div>
+      )}
+
+      {/* Success message */}
+      {showSuccessMessage && (
+        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-md flex items-center">
+          <Check className="w-5 h-5 mr-2" />
+          <span>Data tim berhasil dimuat dari Firestore!</span>
+        </div>
+      )}
       
       {/* Search and filter */}
       <div className="bg-white p-4 rounded-lg shadow border border-gray-200">
@@ -543,7 +571,17 @@ const Teams = () => {
         ))}
       </div>
       
-      {filteredTeams.length === 0 && (
+      {loading && filteredTeams.length === 0 && (
+        <div className="bg-white border border-gray-200 rounded-lg shadow p-8 text-center">
+          <Loader className="h-12 w-12 text-green-500 mx-auto mb-4 animate-spin" />
+          <h3 className="text-lg font-medium text-gray-700 mb-2">Memuat Data Tim</h3>
+          <p className="text-gray-500 mb-4">
+            Sedang mengambil data tim dari Firestore...
+          </p>
+        </div>
+      )}
+      
+      {!loading && filteredTeams.length === 0 && (
         <div className="bg-white border border-gray-200 rounded-lg shadow p-8 text-center">
           <Users className="h-12 w-12 text-gray-300 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-700 mb-2">Tidak ada tim ditemukan</h3>

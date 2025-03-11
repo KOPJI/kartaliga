@@ -184,26 +184,33 @@ export const TournamentProvider = ({ children }: { children: any }) => {
     const loadData = async () => {
       try {
         setLoading(true);
+        console.log("Memulai pengambilan data dari Firestore...");
         
         // First try to load from Firestore
         const teamsData = await fetchTeams();
         const matchesData = await fetchMatches();
         
         if (teamsData.length > 0) {
+          console.log(`Berhasil mengambil ${teamsData.length} tim dari Firestore`);
           setTeams(teamsData);
         } else {
+          console.log("Tidak ada data tim di Firestore, menggunakan data awal");
           // Use initial teams data if no Firestore data
           setTeams(initialTeams);
         }
         
         if (matchesData.length > 0) {
+          console.log(`Berhasil mengambil ${matchesData.length} pertandingan dari Firestore`);
           setMatches(matchesData);
+        } else {
+          console.log("Tidak ada data pertandingan di Firestore");
         }
       } catch (error) {
         console.error("Error loading data from Firestore:", error);
         // Fallback to initial data
         setTeams(initialTeams);
       } finally {
+        console.log("Selesai memuat data dari Firestore");
         setLoading(false);
       }
     };
