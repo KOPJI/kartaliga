@@ -86,7 +86,7 @@ const MatchDetail = () => {
   // Check card accumulation for each player
   const calculateCardAccumulation = () => {
     const accumulation = [];
-    const playerCardCounts = {};
+    const playerCardCounts: Record<string, { yellow: number, red: number, teamId: string }> = {};
     
     // Count cards for all players across all matches
     matches.forEach(m => {
