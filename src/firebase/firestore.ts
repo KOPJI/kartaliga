@@ -57,12 +57,19 @@ export const fetchTeams = async (): Promise<Team[]> => {
 };
 
 export const addTeamToFirestore = async (team: Omit<Team, 'id' | 'players'>): Promise<string> => {
-  const teamDocRef = await addDoc(collection(db, COLLECTIONS.TEAMS), {
-    name: team.name,
-    group: team.group,
-    logo: team.logo || null
-  });
-  return teamDocRef.id;
+  try {
+    console.log('Menambahkan tim ke Firestore:', team.name);
+    const teamDocRef = await addDoc(collection(db, COLLECTIONS.TEAMS), {
+      name: team.name,
+      group: team.group,
+      logo: team.logo || null
+    });
+    console.log('Tim berhasil ditambahkan dengan ID:', teamDocRef.id);
+    return teamDocRef.id;
+  } catch (error) {
+    console.error('Error saat menambahkan tim ke Firestore:', error);
+    throw error;
+  }
 };
 
 export const updateTeamInFirestore = async (team: Team): Promise<void> => {

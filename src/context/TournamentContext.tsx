@@ -227,13 +227,29 @@ export const TournamentProvider = ({ children }: { children: any }) => {
   // Team functions
   const addTeam = async (team: Omit<Team, 'id' | 'players'>) => {
     try {
+      console.log('Memulai proses penambahan tim:', team.name);
+      
+      // Validasi data tim
+      if (!team.name || team.name.trim() === '') {
+        throw new Error('Nama tim tidak boleh kosong');
+      }
+      
+      // Tambahkan tim ke Firestore
       const newTeamId = await addTeamToFirestore(team);
+      console.log('Tim berhasil ditambahkan ke Firestore dengan ID:', newTeamId);
+      
+      // Buat objek tim baru
       const newTeam: Team = {
         ...team,
         id: newTeamId,
         players: []
       };
+      
+      // Perbarui state teams
       setTeams(prev => [...prev, newTeam]);
+      console.log('State teams berhasil diperbarui');
+      
+      // Tidak perlu return nilai
     } catch (error) {
       console.error("Error adding team:", error);
       throw error;

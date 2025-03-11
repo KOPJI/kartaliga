@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTournament, Team } from '../context/TournamentContext';
-import { Pencil, Plus, Search, UserPlus, Users, X, Trash2, Loader, Check } from 'lucide-react';
+import { Pencil, Plus, Search, UserPlus, Users, X, Trash2, Loader, Check, CircleAlert } from 'lucide-react';
 
 const Teams = () => {
   const navigate = useNavigate();
@@ -23,6 +23,8 @@ const Teams = () => {
   const [teamToDelete, setTeamToDelete] = useState<Team | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Menampilkan pesan sukses ketika data berhasil diambil
   useEffect(() => {
@@ -35,59 +37,84 @@ const Teams = () => {
     }
   }, [loading, teams]);
 
-  const handleLogoUpload = async (file: File) => {
-    if (!file) return;
+  const handleLogoUpload = async (file: File): Promise<string | null> => {
+    if (!file) return null;
     
     setUploadingLogo(true);
     try {
       // Konversi file gambar ke base64
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      
-      reader.onload = () => {
-        const base64Logo = reader.result as string;
-        setNewTeam({ ...newTeam, logo: base64Logo });
-        setUploadingLogo(false);
-      };
-      
-      reader.onerror = (error) => {
-        console.error('Error converting logo to base64:', error);
-        alert('Gagal memproses logo. Silakan coba lagi.');
-        setUploadingLogo(false);
-      };
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        
+        reader.onload = () => {
+          const base64Logo = reader.result as string;
+          setUploadingLogo(false);
+          resolve(base64Logo);
+        };
+        
+        reader.onerror = (error) => {
+          console.error('Error converting logo to base64:', error);
+          alert('Gagal memproses logo. Silakan coba lagi.');
+          setUploadingLogo(false);
+          reject(null);
+        };
+      });
     } catch (error) {
       console.error('Error handling logo:', error);
       alert('Gagal memproses logo. Silakan coba lagi.');
       setUploadingLogo(false);
+      return null;
     }
   };
 
   const handleAddTeam = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Reset error message
+    setErrorMessage(null);
+    
     if (newTeam.name.trim() === '') {
-      alert('Nama tim tidak boleh kosong');
+      setErrorMessage('Nama tim tidak boleh kosong');
       return;
     }
     
-    if (logoFile) {
-      await handleLogoUpload(logoFile);
-      return; // Fungsi akan dipanggil lagi setelah logo selesai diproses
-    }
+    setIsSubmitting(true);
     
     try {
+      let logoBase64 = newTeam.logo;
+      
+      // Jika ada file logo yang diunggah, proses terlebih dahulu
+      if (logoFile) {
+        logoBase64 = await handleLogoUpload(logoFile);
+        if (!logoBase64) {
+          // Jika gagal memproses logo, hentikan proses
+          setErrorMessage('Gagal memproses logo. Silakan coba lagi.');
+          setIsSubmitting(false);
+          return;
+        }
+      }
+      
+      // Tambahkan tim dengan logo yang sudah diproses
       await addTeam({
         name: newTeam.name,
         group: newTeam.group,
-        logo: newTeam.logo
+        logo: logoBase64
       });
       
+      // Reset form setelah berhasil
       setNewTeam({ name: '', group: 'A', logo: '' });
       setLogoFile(null);
       setIsAddingTeam(false);
+      
+      // Tampilkan pesan sukses
+      setShowSuccessMessage(true);
+      setTimeout(() => setShowSuccessMessage(false), 3000);
     } catch (error) {
       console.error('Error adding team:', error);
-      alert('Gagal menambahkan tim. Silakan coba lagi.');
+      setErrorMessage(error instanceof Error ? error.message : 'Gagal menambahkan tim. Silakan coba lagi.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -263,6 +290,13 @@ const Teams = () => {
             </div>
             
             <form onSubmit={handleAddTeam}>
+              {errorMessage && (
+                <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md flex items-center">
+                  <CircleAlert className="w-5 h-5 mr-2" />
+                  <span>{errorMessage}</span>
+                </div>
+              )}
+              
               <div className="mb-4">
                 <label className="block text-gray-700 mb-2" htmlFor="team-name">
                   Nama Tim
@@ -344,18 +378,19 @@ const Teams = () => {
                   type="button"
                   onClick={() => setIsAddingTeam(false)}
                   className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-100"
+                  disabled={isSubmitting}
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
-                  disabled={uploadingLogo}
+                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center"
+                  disabled={isSubmitting || uploadingLogo}
                 >
-                  {uploadingLogo ? (
+                  {isSubmitting || uploadingLogo ? (
                     <>
                       <Loader className="h-5 w-5 mr-2 animate-spin" />
-                      Mengunggah...
+                      {uploadingLogo ? 'Mengunggah...' : 'Menyimpan...'}
                     </>
                   ) : (
                     'Simpan'
