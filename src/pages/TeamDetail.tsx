@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTournament, Player } from '../context/TournamentContext';
 import { ArrowLeft, Pencil, Plus, Save, Trash2, User, UserPlus, Users, Loader, X } from 'lucide-react';
+import TeamStats from '../components/TeamStats';
 
 const TeamDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getTeamById, updateTeam, deleteTeam, addPlayer, deletePlayer } = useTournament();
+  const { getTeamById, updateTeam, deleteTeam, addPlayer, deletePlayer, matches } = useTournament();
   
   const team = getTeamById(id || '');
   const [editMode, setEditMode] = useState(false);
@@ -474,6 +475,9 @@ const TeamDetail = () => {
           </div>
         </div>
       </div>
+      
+      {/* Tambahkan komponen TeamStats */}
+      {team && <TeamStats team={team} matches={matches} />}
       
       {/* Actions */}
       <div className="flex gap-3">

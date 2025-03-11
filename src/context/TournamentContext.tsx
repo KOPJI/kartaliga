@@ -282,6 +282,17 @@ const validateSchedule = (
     }
   });
 
+  // Cek distribusi istirahat
+  teams.forEach(team => {
+    const stats = calculateTeamStats(team, matches);
+    if (stats.minRestDays < 2) {
+      errors.push(`Tim ${team.name} memiliki waktu istirahat yang terlalu singkat (${stats.minRestDays} hari)`);
+    }
+    if (stats.maxRestDays > 5) {
+      errors.push(`Tim ${team.name} memiliki waktu istirahat yang terlalu lama (${stats.maxRestDays} hari)`);
+    }
+  });
+
   return {
     isValid: errors.length === 0,
     errors
@@ -570,11 +581,8 @@ export const TournamentProvider = ({ children }: { children: any }) => {
   // Match functions
   const generateSchedule = async () => {
     try {
-      // Kelompokkan tim berdasarkan grup
       const teamsByGroup = teams.reduce((acc, team) => {
-        if (!acc[team.group]) {
-          acc[team.group] = [];
-        }
+        if (!acc[team.group]) acc[team.group] = [];
         acc[team.group].push(team);
         return acc;
       }, {} as Record<string, Team[]>);
@@ -582,17 +590,14 @@ export const TournamentProvider = ({ children }: { children: any }) => {
       const matchesToCreate: Omit<Match, 'id' | 'goals' | 'cards'>[] = [];
       let currentDate = new Date().toISOString().split('T')[0];
       let currentSlotIndex = 0;
+      let maxAttempts = 100; // Maksimum percobaan untuk menjadwalkan pertandingan
       
-      // Generate jadwal untuk setiap grup
       for (const [group, groupTeams] of Object.entries(teamsByGroup)) {
         console.log(`Membuat jadwal untuk Grup ${group} dengan ${groupTeams.length} tim`);
         
-        // Round-robin untuk setiap putaran
         for (let round = 1; round <= 2; round++) {
-          // Buat salinan array tim untuk rotasi
           const teamsForRound = [...groupTeams];
           
-          // Jika jumlah tim ganjil, tambahkan tim dummy
           if (teamsForRound.length % 2 !== 0) {
             teamsForRound.push({ id: 'bye', name: 'BYE', group } as Team);
           }
@@ -601,44 +606,63 @@ export const TournamentProvider = ({ children }: { children: any }) => {
           const rounds = n - 1;
           const matchesPerRound = n / 2;
           
-          // Algoritma round-robin
           for (let i = 0; i < rounds; i++) {
             for (let j = 0; j < matchesPerRound; j++) {
               const home = teamsForRound[j];
               const away = teamsForRound[n - 1 - j];
               
-              // Lewati jika ada tim dummy
               if (home.id === 'bye' || away.id === 'bye') continue;
               
-              // Tentukan home/away berdasarkan putaran
               const [homeTeam, awayTeam] = round === 1 ? [home, away] : [away, home];
               
-              const match: Omit<Match, 'id' | 'goals' | 'cards'> = {
-                homeTeamId: homeTeam.id,
-                awayTeamId: awayTeam.id,
-                date: currentDate,
-                time: MATCH_SLOTS[currentSlotIndex].time,
-                venue: 'Lapangan KARTA',
-                group,
-                round,
-                homeScore: 0,
-                awayScore: 0,
-                status: 'scheduled' as const
-              };
+              // Coba jadwalkan pertandingan dengan mempertimbangkan waktu istirahat
+              let attempts = 0;
+              let matchScheduled = false;
               
-              matchesToCreate.push(match);
+              while (!matchScheduled && attempts < maxAttempts) {
+                const match: Omit<Match, 'id' | 'goals' | 'cards'> = {
+                  homeTeamId: homeTeam.id,
+                  awayTeamId: awayTeam.id,
+                  date: currentDate,
+                  time: MATCH_SLOTS[currentSlotIndex].time,
+                  venue: 'Lapangan KARTA',
+                  group,
+                  round,
+                  homeScore: 0,
+                  awayScore: 0,
+                  status: 'scheduled' as const
+                };
+                
+                // Validasi jadwal
+                const tempMatches = [...matchesToCreate, match];
+                const validation = validateSchedule(tempMatches, teams);
+                
+                if (validation.isValid) {
+                  matchesToCreate.push(match);
+                  matchScheduled = true;
+                  
+                  // Pindah ke slot waktu berikutnya
+                  currentSlotIndex = (currentSlotIndex + 1) % MATCH_SLOTS.length;
+                  if (currentSlotIndex === 0) {
+                    currentDate = addDays(currentDate, 1);
+                  }
+                } else {
+                  attempts++;
+                  if (currentSlotIndex < MATCH_SLOTS.length - 1) {
+                    currentSlotIndex++;
+                  } else {
+                    currentSlotIndex = 0;
+                    currentDate = addDays(currentDate, 1);
+                  }
+                }
+              }
               
-              // Pindah ke slot waktu berikutnya
-              currentSlotIndex = (currentSlotIndex + 1) % MATCH_SLOTS.length;
-              
-              // Jika sudah 3 pertandingan dalam sehari, pindah ke hari berikutnya
-              if (currentSlotIndex === 0) {
-                currentDate = addDays(currentDate, 1);
+              if (!matchScheduled) {
+                throw new Error(`Tidak dapat menjadwalkan pertandingan antara ${homeTeam.name} dan ${awayTeam.name} setelah ${maxAttempts} percobaan`);
               }
             }
             
-            // Rotasi tim (kecuali tim pertama)
-            const firstTeam = teamsForRound[0];
+            // Rotasi tim
             const lastTeam = teamsForRound[teamsForRound.length - 1];
             for (let k = teamsForRound.length - 1; k > 1; k--) {
               teamsForRound[k] = teamsForRound[k - 1];
@@ -646,26 +670,26 @@ export const TournamentProvider = ({ children }: { children: any }) => {
             teamsForRound[1] = lastTeam;
           }
           
-          // Tambah jeda 1 hari antara putaran
+          // Tambah jeda antara putaran
           if (currentSlotIndex !== 0) {
             currentDate = addDays(currentDate, 1);
             currentSlotIndex = 0;
           }
-          currentDate = addDays(currentDate, 1); // Jeda tambahan antara putaran
+          currentDate = addDays(currentDate, 2); // Jeda 2 hari antara putaran
         }
         
-        // Tambah jeda 1 hari antara grup
+        // Tambah jeda antara grup
         if (currentSlotIndex !== 0) {
           currentDate = addDays(currentDate, 1);
           currentSlotIndex = 0;
         }
-        currentDate = addDays(currentDate, 1); // Jeda tambahan antara grup
+        currentDate = addDays(currentDate, 2); // Jeda 2 hari antara grup
       }
       
       // Hapus jadwal yang ada
       await Promise.all(matches.map(match => deleteMatchFromFirestore(match.id)));
       
-      // Tambahkan pertandingan baru ke Firestore
+      // Tambahkan pertandingan baru
       const newMatches: Match[] = [];
       for (const match of matchesToCreate) {
         const matchId = await addMatchToFirestore(match);
