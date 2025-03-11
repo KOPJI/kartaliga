@@ -17,8 +17,21 @@ const DataInitialization = () => {
     setError(null);
     
     try {
-      await initializeTeamsToFirestore(teams);
-      setSuccess('Data tim berhasil diinisialisasi ke Firestore');
+      // Validasi data tim sebelum mengirimkannya ke Firestore
+      const validTeams = teams.filter(team => {
+        if (!team.name || !team.group) {
+          console.warn(`Skipping invalid team: ${JSON.stringify(team)}`);
+          return false;
+        }
+        return true;
+      });
+      
+      if (validTeams.length === 0) {
+        throw new Error('Tidak ada data tim yang valid untuk diinisialisasi');
+      }
+      
+      await initializeTeamsToFirestore(validTeams);
+      setSuccess(`${validTeams.length} data tim berhasil diinisialisasi ke Firestore`);
     } catch (err) {
       console.error('Error initializing teams:', err);
       setError('Gagal menginisialisasi data tim. Silakan coba lagi.');
@@ -33,9 +46,23 @@ const DataInitialization = () => {
     setError(null);
     
     try {
-      const players = teams.flatMap(team => team.players);
-      await initializePlayersToFirestore(players);
-      setSuccess('Data pemain berhasil diinisialisasi ke Firestore');
+      const allPlayers = teams.flatMap(team => team.players);
+      
+      // Validasi data pemain sebelum mengirimkannya ke Firestore
+      const validPlayers = allPlayers.filter(player => {
+        if (!player.name || !player.teamId) {
+          console.warn(`Skipping invalid player: ${JSON.stringify(player)}`);
+          return false;
+        }
+        return true;
+      });
+      
+      if (validPlayers.length === 0) {
+        throw new Error('Tidak ada data pemain yang valid untuk diinisialisasi');
+      }
+      
+      await initializePlayersToFirestore(validPlayers);
+      setSuccess(`${validPlayers.length} data pemain berhasil diinisialisasi ke Firestore`);
     } catch (err) {
       console.error('Error initializing players:', err);
       setError('Gagal menginisialisasi data pemain. Silakan coba lagi.');

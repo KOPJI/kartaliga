@@ -205,10 +205,16 @@ export const initializeTeamsToFirestore = async (teams: Team[]): Promise<void> =
   const batch = writeBatch(db);
   
   teams.forEach(team => {
+    // Pastikan semua field memiliki nilai yang valid
+    if (!team.name) {
+      console.warn(`Skipping team with id ${team.id} because name is undefined`);
+      return; // Skip tim ini
+    }
+    
     const teamRef = doc(collection(db, COLLECTIONS.TEAMS));
     batch.set(teamRef, {
-      name: team.name,
-      group: team.group,
+      name: team.name || '',
+      group: team.group || '',
       logo: team.logo || null
     });
   });
@@ -220,12 +226,18 @@ export const initializePlayersToFirestore = async (players: Player[]): Promise<v
   const batch = writeBatch(db);
   
   players.forEach(player => {
+    // Pastikan semua field memiliki nilai yang valid
+    if (!player.name || !player.teamId) {
+      console.warn(`Skipping player with id ${player.id} because required fields are missing`);
+      return; // Skip pemain ini
+    }
+    
     const playerRef = doc(collection(db, COLLECTIONS.PLAYERS));
     batch.set(playerRef, {
-      name: player.name,
-      number: player.number,
-      position: player.position,
-      teamId: player.teamId
+      name: player.name || '',
+      number: player.number || 0,
+      position: player.position || '',
+      teamId: player.teamId || ''
     });
   });
   
