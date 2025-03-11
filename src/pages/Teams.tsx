@@ -1,14 +1,22 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useTournament, Team } from '../context/TournamentContext';
 import { Pencil, Plus, Search, UserPlus, Users, X } from 'lucide-react';
 
 const Teams = () => {
-  const { teams, addTeam } = useTournament();
+  const navigate = useNavigate();
+  const { teams, addTeam, addPlayer } = useTournament();
   const [isAddingTeam, setIsAddingTeam] = useState(false);
-  const [newTeam, setNewTeam] = useState({ name: '', group: 'A' });
+  const [newTeam, setNewTeam] = useState({ name: '', group: 'A', logo: '' });
   const [searchTerm, setSearchTerm] = useState('');
   const [filterGroup, setFilterGroup] = useState<string | null>(null);
+  const [isAddingPlayer, setIsAddingPlayer] = useState(false);
+  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
+  const [newPlayer, setNewPlayer] = useState({
+    name: '',
+    number: 1,
+    position: 'Penyerang'
+  });
 
   const handleAddTeam = (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,10 +29,45 @@ const Teams = () => {
     addTeam({
       name: newTeam.name,
       group: newTeam.group,
+      logo: newTeam.logo
     });
     
-    setNewTeam({ name: '', group: 'A' });
+    setNewTeam({ name: '', group: 'A', logo: '' });
     setIsAddingTeam(false);
+  };
+
+  const handleAddPlayer = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!selectedTeamId) return;
+    
+    if (newPlayer.name.trim() === '') {
+      alert('Nama pemain tidak boleh kosong');
+      return;
+    }
+    
+    addPlayer({
+      name: newPlayer.name,
+      number: newPlayer.number,
+      position: newPlayer.position,
+      teamId: selectedTeamId,
+    });
+    
+    setNewPlayer({
+      name: '',
+      number: 1,
+      position: 'Penyerang',
+    });
+    
+    setIsAddingPlayer(false);
+    setSelectedTeamId(null);
+  };
+
+  const openAddPlayerModal = (teamId: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setSelectedTeamId(teamId);
+    setIsAddingPlayer(true);
   };
   
   const filteredTeams = teams
@@ -137,6 +180,27 @@ const Teams = () => {
                 />
               </div>
               
+              <div className="mb-4">
+                <label className="block text-gray-700 mb-2" htmlFor="team-logo">
+                  Logo Tim (URL)
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    id="team-logo"
+                    type="text"
+                    className="w-full border border-gray-300 rounded-md p-2 focus:ring-green-500 focus:border-green-500"
+                    value={newTeam.logo}
+                    onChange={(e) => setNewTeam({ ...newTeam, logo: e.target.value })}
+                    placeholder="Masukkan URL logo tim"
+                  />
+                  {newTeam.logo && (
+                    <div className="w-10 h-10 border border-gray-300 rounded-md flex items-center justify-center overflow-hidden">
+                      <img src={newTeam.logo} alt="Preview" className="max-w-full max-h-full object-contain" />
+                    </div>
+                  )}
+                </div>
+              </div>
+              
               <div className="mb-6">
                 <label className="block text-gray-700 mb-2" htmlFor="team-group">
                   Grup
@@ -174,6 +238,92 @@ const Teams = () => {
         </div>
       )}
       
+      {/* Add player form */}
+      {isAddingPlayer && selectedTeamId && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">Tambah Pemain Baru</h2>
+              <button onClick={() => {
+                setIsAddingPlayer(false);
+                setSelectedTeamId(null);
+              }}>
+                <X className="h-6 w-6 text-gray-500 hover:text-gray-700" />
+              </button>
+            </div>
+            
+            <form onSubmit={handleAddPlayer}>
+              <div className="mb-4">
+                <label className="block text-gray-700 mb-2" htmlFor="player-name">
+                  Nama Pemain
+                </label>
+                <input
+                  id="player-name"
+                  type="text"
+                  className="w-full border border-gray-300 rounded-md p-2 focus:ring-green-500 focus:border-green-500"
+                  value={newPlayer.name}
+                  onChange={(e) => setNewPlayer({ ...newPlayer, name: e.target.value })}
+                  placeholder="Masukkan nama pemain"
+                  required
+                />
+              </div>
+              
+              <div className="mb-4">
+                <label className="block text-gray-700 mb-2" htmlFor="player-number">
+                  Nomor Punggung
+                </label>
+                <input
+                  id="player-number"
+                  type="number"
+                  min="1"
+                  max="99"
+                  className="w-full border border-gray-300 rounded-md p-2 focus:ring-green-500 focus:border-green-500"
+                  value={newPlayer.number}
+                  onChange={(e) => setNewPlayer({ ...newPlayer, number: parseInt(e.target.value) })}
+                  required
+                />
+              </div>
+              
+              <div className="mb-6">
+                <label className="block text-gray-700 mb-2" htmlFor="player-position">
+                  Posisi
+                </label>
+                <select
+                  id="player-position"
+                  className="w-full border border-gray-300 rounded-md p-2 focus:ring-green-500 focus:border-green-500"
+                  value={newPlayer.position}
+                  onChange={(e) => setNewPlayer({ ...newPlayer, position: e.target.value })}
+                >
+                  <option value="Penyerang">Penyerang</option>
+                  <option value="Gelandang">Gelandang</option>
+                  <option value="Bertahan">Bertahan</option>
+                  <option value="Kiper">Kiper</option>
+                </select>
+              </div>
+              
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsAddingPlayer(false);
+                    setSelectedTeamId(null);
+                  }}
+                  className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-100"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                >
+                  Simpan
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      
       {/* Team list */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredTeams.map((team) => (
@@ -187,6 +337,11 @@ const Teams = () => {
                 <div className="inline-block px-2 py-1 rounded-md bg-green-100 text-green-800 text-xs font-medium mb-2">
                   Grup {team.group}
                 </div>
+                {team.logo && (
+                  <div className="w-10 h-10 mb-2 overflow-hidden">
+                    <img src={team.logo} alt={team.name} className="w-full h-full object-contain" />
+                  </div>
+                )}
                 <h3 className="text-lg font-semibold">{team.name}</h3>
                 <div className="flex items-center mt-2 text-gray-500 text-sm">
                   <Users className="h-4 w-4 mr-1" />
@@ -195,10 +350,20 @@ const Teams = () => {
               </div>
               
               <div className="flex flex-col gap-2">
-                <span className="p-2 bg-blue-50 text-blue-600 rounded-full hover:bg-blue-100">
+                <span 
+                  className="p-2 bg-blue-50 text-blue-600 rounded-full hover:bg-blue-100 cursor-pointer"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    navigate(`/teams/${team.id}`);
+                  }}
+                >
                   <Pencil className="h-4 w-4" />
                 </span>
-                <span className="p-2 bg-green-50 text-green-600 rounded-full hover:bg-green-100">
+                <span 
+                  className="p-2 bg-green-50 text-green-600 rounded-full hover:bg-green-100 cursor-pointer"
+                  onClick={(e) => openAddPlayerModal(team.id, e)}
+                >
                   <UserPlus className="h-4 w-4" />
                 </span>
               </div>
