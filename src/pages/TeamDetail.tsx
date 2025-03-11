@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTournament, Player } from '../context/TournamentContext';
-import { ArrowLeft, Pencil, Plus, Save, Trash2, User, UserPlus, Users } from 'lucide-react';
+import { ArrowLeft, Pencil, Plus, Save, Trash2, User, UserPlus, Users, Loader, ImagePlus } from 'lucide-react';
 
 const TeamDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -13,7 +13,10 @@ const TeamDetail = () => {
   const [teamData, setTeamData] = useState({
     name: team?.name || '',
     group: team?.group || 'A',
+    logo: team?.logo || ''
   });
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
   const [isAddingPlayer, setIsAddingPlayer] = useState(false);
   const [newPlayer, setNewPlayer] = useState({
     name: '',
@@ -24,26 +27,136 @@ const TeamDetail = () => {
   const [playerPhotoFile, setPlayerPhotoFile] = useState<File | null>(null);
   const [uploadingPlayerPhoto, setUploadingPlayerPhoto] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (team) {
       setTeamData({
         name: team.name,
         group: team.group,
+        logo: team.logo || ''
       });
     }
   }, [team]);
 
-  const handleTeamUpdate = () => {
+  const handleLogoUpload = async (file: File): Promise<string | null> => {
+    if (!file) return null;
+    
+    setUploadingLogo(true);
+    try {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        
+        reader.onload = () => {
+          const img = new Image();
+          img.src = reader.result as string;
+          
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Ukuran maksimum yang lebih kecil (200px)
+            const MAX_SIZE = 200;
+            let width = img.width;
+            let height = img.height;
+            
+            if (width > height) {
+              if (width > MAX_SIZE) {
+                height = Math.round(height * (MAX_SIZE / width));
+                width = MAX_SIZE;
+              }
+            } else {
+              if (height > MAX_SIZE) {
+                width = Math.round(width * (MAX_SIZE / height));
+                height = MAX_SIZE;
+              }
+            }
+            
+            // Pastikan ukuran minimum
+            const MIN_SIZE = 50;
+            if (width < MIN_SIZE) {
+              height = Math.round(height * (MIN_SIZE / width));
+              width = MIN_SIZE;
+            }
+            if (height < MIN_SIZE) {
+              width = Math.round(width * (MIN_SIZE / height));
+              height = MIN_SIZE;
+            }
+            
+            canvas.width = width;
+            canvas.height = height;
+            
+            // Tambahkan background putih untuk gambar PNG transparan
+            if (ctx) {
+              ctx.fillStyle = '#FFFFFF';
+              ctx.fillRect(0, 0, width, height);
+              ctx.drawImage(img, 0, 0, width, height);
+            }
+            
+            // Kompresi yang lebih agresif (60%)
+            const compressedBase64 = canvas.toDataURL('image/jpeg', 0.6);
+            
+            setUploadingLogo(false);
+            resolve(compressedBase64);
+          };
+          
+          img.onerror = () => {
+            console.error('Error loading image for compression');
+            setErrorMessage('Gagal memproses logo. Silakan coba lagi.');
+            setUploadingLogo(false);
+            reject(null);
+          };
+        };
+        
+        reader.onerror = (error) => {
+          console.error('Error reading file:', error);
+          setErrorMessage('Gagal membaca file logo. Silakan coba lagi.');
+          setUploadingLogo(false);
+          reject(null);
+        };
+      });
+    } catch (error) {
+      console.error('Error in logo upload:', error);
+      setErrorMessage('Terjadi kesalahan saat mengunggah logo.');
+      setUploadingLogo(false);
+      return null;
+    }
+  };
+
+  const handleTeamUpdate = async () => {
     if (!team) return;
     
-    updateTeam({
-      ...team,
-      name: teamData.name,
-      group: teamData.group,
-    });
+    setIsSubmitting(true);
+    setErrorMessage(null);
     
-    setEditMode(false);
+    try {
+      let logoBase64 = teamData.logo;
+      
+      if (logoFile) {
+        logoBase64 = await handleLogoUpload(logoFile);
+        if (!logoBase64) {
+          setErrorMessage('Gagal memproses logo. Silakan coba lagi.');
+          setIsSubmitting(false);
+          return;
+        }
+      }
+      
+      await updateTeam({
+        ...team,
+        name: teamData.name,
+        group: teamData.group,
+        logo: logoBase64
+      });
+      
+      setEditMode(false);
+      setLogoFile(null);
+    } catch (error) {
+      console.error('Error updating team:', error);
+      setErrorMessage('Gagal mengupdate tim. Silakan coba lagi.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleDeleteTeam = () => {
@@ -144,99 +257,178 @@ const TeamDetail = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3 mb-6">
+      <div className="flex items-center justify-between">
         <button
           onClick={() => navigate('/teams')}
-          className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
+          className="flex items-center text-gray-600 hover:text-gray-800"
         >
-          <ArrowLeft className="h-5 w-5" />
+          <ArrowLeft className="w-5 h-5 mr-1" />
+          Kembali ke Daftar Tim
         </button>
         
-        <div>
-          <h1 className="text-3xl font-bold text-green-800">
-            {editMode ? (
-              <input
-                type="text"
-                value={teamData.name}
-                onChange={(e) => setTeamData({ ...teamData, name: e.target.value })}
-                className="border-b border-gray-300 focus:border-green-600 focus:outline-none bg-transparent text-3xl font-bold text-green-800 w-full"
-              />
-            ) : (
-              team.name
-            )}
-          </h1>
-          <div className="flex items-center gap-2">
-            <span className="font-medium text-gray-600">
-              Grup {editMode ? (
-                <select
-                  value={teamData.group}
-                  onChange={(e) => setTeamData({ ...teamData, group: e.target.value })}
-                  className="border-b border-gray-300 focus:border-green-600 focus:outline-none bg-transparent"
-                >
-                  <option value="A">A</option>
-                  <option value="B">B</option>
-                  <option value="C">C</option>
-                  <option value="D">D</option>
-                </select>
+        <div className="flex gap-2">
+          {!editMode ? (
+            <button
+              onClick={() => setEditMode(true)}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center"
+            >
+              <Pencil className="w-4 h-4 mr-1" />
+              Edit Tim
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={() => {
+                  setEditMode(false);
+                  setTeamData({
+                    name: team?.name || '',
+                    group: team?.group || 'A',
+                    logo: team?.logo || ''
+                  });
+                  setLogoFile(null);
+                }}
+                className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-100"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleTeamUpdate}
+                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center"
+                disabled={isSubmitting || uploadingLogo}
+              >
+                {isSubmitting || uploadingLogo ? (
+                  <>
+                    <Loader className="w-4 h-4 mr-1 animate-spin" />
+                    {uploadingLogo ? 'Mengunggah...' : 'Menyimpan...'}
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4 mr-1" />
+                    Simpan
+                  </>
+                )}
+              </button>
+            </>
+          )}
+          
+          <button
+            onClick={handleDeleteTeam}
+            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 flex items-center"
+          >
+            <Trash2 className="w-4 h-4 mr-1" />
+            Hapus Tim
+          </button>
+        </div>
+      </div>
+
+      {errorMessage && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
+          {errorMessage}
+        </div>
+      )}
+
+      <div className="bg-white rounded-lg shadow p-6">
+        <div className="space-y-4">
+          {/* Logo Tim */}
+          <div className="flex items-start space-x-4">
+            <div className="w-24 h-24 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center overflow-hidden">
+              {editMode ? (
+                <label className="w-full h-full cursor-pointer flex flex-col items-center justify-center">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setLogoFile(file);
+                        setTeamData({
+                          ...teamData,
+                          logo: URL.createObjectURL(file)
+                        });
+                      }
+                    }}
+                  />
+                  {teamData.logo ? (
+                    <img
+                      src={logoFile ? URL.createObjectURL(logoFile) : teamData.logo}
+                      alt="Logo Tim"
+                      className="w-full h-full object-contain"
+                    />
+                  ) : (
+                    <div className="text-center">
+                      <ImagePlus className="w-8 h-8 mx-auto text-gray-400" />
+                      <span className="text-sm text-gray-500">Upload Logo</span>
+                    </div>
+                  )}
+                </label>
               ) : (
-                team.group
+                teamData.logo ? (
+                  <img
+                    src={teamData.logo}
+                    alt="Logo Tim"
+                    className="w-full h-full object-contain"
+                  />
+                ) : (
+                  <div className="text-center">
+                    <ImagePlus className="w-8 h-8 mx-auto text-gray-400" />
+                    <span className="text-sm text-gray-500">Tidak ada logo</span>
+                  </div>
+                )
               )}
-            </span>
-            <span className="text-gray-500">•</span>
-            <span className="text-gray-500">{team.players.length} Pemain</span>
+            </div>
+            
+            <div className="flex-1">
+              <div className="mb-4">
+                <label className="block text-gray-700 font-medium mb-2">
+                  Nama Tim
+                </label>
+                {editMode ? (
+                  <input
+                    type="text"
+                    value={teamData.name}
+                    onChange={(e) => setTeamData({ ...teamData, name: e.target.value })}
+                    className="w-full border border-gray-300 rounded-md p-2 focus:ring-green-500 focus:border-green-500"
+                    placeholder="Masukkan nama tim"
+                  />
+                ) : (
+                  <p className="text-gray-900">{teamData.name || 'Tidak ada nama'}</p>
+                )}
+              </div>
+              
+              <div>
+                <label className="block text-gray-700 font-medium mb-2">
+                  Grup
+                </label>
+                {editMode ? (
+                  <select
+                    value={teamData.group}
+                    onChange={(e) => setTeamData({ ...teamData, group: e.target.value })}
+                    className="w-full border border-gray-300 rounded-md p-2 focus:ring-green-500 focus:border-green-500"
+                  >
+                    <option value="A">Grup A</option>
+                    <option value="B">Grup B</option>
+                    <option value="C">Grup C</option>
+                    <option value="D">Grup D</option>
+                  </select>
+                ) : (
+                  <p className="text-gray-900">Grup {teamData.group || 'Tidak ada grup'}</p>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </div>
       
       {/* Actions */}
       <div className="flex gap-3">
-        {editMode ? (
-          <>
-            <button
-              onClick={handleTeamUpdate}
-              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors flex items-center"
-            >
-              <Save className="w-5 h-5 mr-1" />
-              Simpan
-            </button>
-            <button
-              onClick={() => {
-                setEditMode(false);
-                setTeamData({
-                  name: team.name,
-                  group: team.group,
-                });
-              }}
-              className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-100 transition-colors"
-            >
-              Batal
-            </button>
-          </>
-        ) : (
-          <>
-            <button
-              onClick={() => setEditMode(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center"
-            >
-              <Pencil className="w-5 h-5 mr-1" />
-              Pencil Tim
-            </button>
-            <button
-              onClick={() => setIsAddingPlayer(true)}
-              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors flex items-center"
-            >
-              <UserPlus className="w-5 h-5 mr-1" />
-              Tambah Pemain
-            </button>
-            <button
-              onClick={handleDeleteTeam}
-              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center"
-            >
-              <Trash2 className="w-5 h-5 mr-1" />
-              Hapus Tim
-            </button>
-          </>
-        )}
+        <button
+          onClick={() => setIsAddingPlayer(true)}
+          className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors flex items-center"
+        >
+          <UserPlus className="w-5 h-5 mr-1" />
+          Tambah Pemain
+        </button>
       </div>
       
       {/* Players list */}
