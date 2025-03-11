@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTournament, Player } from '../context/TournamentContext';
-import { ArrowLeft, Pencil, Plus, Save, Trash2, User, UserPlus, Users, Loader, ImagePlus } from 'lucide-react';
+import { ArrowLeft, Pencil, Plus, Save, Trash2, User, UserPlus, Users, Loader } from 'lucide-react';
 
 const TeamDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -357,7 +357,7 @@ const TeamDetail = () => {
                     />
                   ) : (
                     <div className="text-center">
-                      <ImagePlus className="w-8 h-8 mx-auto text-gray-400" />
+                      <Plus className="w-8 h-8 mx-auto text-gray-400" />
                       <span className="text-sm text-gray-500">Upload Logo</span>
                     </div>
                   )}
@@ -371,7 +371,7 @@ const TeamDetail = () => {
                   />
                 ) : (
                   <div className="text-center">
-                    <ImagePlus className="w-8 h-8 mx-auto text-gray-400" />
+                    <User className="w-8 h-8 mx-auto text-gray-400" />
                     <span className="text-sm text-gray-500">Tidak ada logo</span>
                   </div>
                 )
