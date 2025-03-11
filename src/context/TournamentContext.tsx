@@ -581,52 +581,85 @@ export const TournamentProvider = ({ children }: { children: any }) => {
       
       const matchesToCreate: Omit<Match, 'id' | 'goals' | 'cards'>[] = [];
       let currentDate = new Date().toISOString().split('T')[0];
+      let currentSlotIndex = 0;
       
       // Generate jadwal untuk setiap grup
       for (const [group, groupTeams] of Object.entries(teamsByGroup)) {
         console.log(`Membuat jadwal untuk Grup ${group} dengan ${groupTeams.length} tim`);
         
-        // Untuk setiap tim dalam grup
-        for (let i = 0; i < groupTeams.length; i++) {
-          for (let j = i + 1; j < groupTeams.length; j++) {
-            // Pertandingan kandang (Ronde 1)
-            const homeMatch: Omit<Match, 'id' | 'goals' | 'cards'> = {
-              homeTeamId: groupTeams[i].id,
-              awayTeamId: groupTeams[j].id,
-              date: currentDate,
-              time: MATCH_SLOTS[0].time,
-              venue: 'Lapangan KARTA',
-              group,
-              round: 1,
-              homeScore: 0,
-              awayScore: 0,
-              status: 'scheduled' as const
-            };
-            
-            matchesToCreate.push(homeMatch);
-            currentDate = addDays(currentDate, 1);
-            
-            // Pertandingan tandang (Ronde 2)
-            const awayMatch: Omit<Match, 'id' | 'goals' | 'cards'> = {
-              homeTeamId: groupTeams[j].id,
-              awayTeamId: groupTeams[i].id,
-              date: currentDate,
-              time: MATCH_SLOTS[0].time,
-              venue: 'Lapangan KARTA',
-              group,
-              round: 2,
-              homeScore: 0,
-              awayScore: 0,
-              status: 'scheduled' as const
-            };
-            
-            matchesToCreate.push(awayMatch);
-            currentDate = addDays(currentDate, 1);
+        // Round-robin untuk setiap putaran
+        for (let round = 1; round <= 2; round++) {
+          // Buat salinan array tim untuk rotasi
+          const teamsForRound = [...groupTeams];
+          
+          // Jika jumlah tim ganjil, tambahkan tim dummy
+          if (teamsForRound.length % 2 !== 0) {
+            teamsForRound.push({ id: 'bye', name: 'BYE', group } as Team);
           }
+          
+          const n = teamsForRound.length;
+          const rounds = n - 1;
+          const matchesPerRound = n / 2;
+          
+          // Algoritma round-robin
+          for (let i = 0; i < rounds; i++) {
+            for (let j = 0; j < matchesPerRound; j++) {
+              const home = teamsForRound[j];
+              const away = teamsForRound[n - 1 - j];
+              
+              // Lewati jika ada tim dummy
+              if (home.id === 'bye' || away.id === 'bye') continue;
+              
+              // Tentukan home/away berdasarkan putaran
+              const [homeTeam, awayTeam] = round === 1 ? [home, away] : [away, home];
+              
+              const match: Omit<Match, 'id' | 'goals' | 'cards'> = {
+                homeTeamId: homeTeam.id,
+                awayTeamId: awayTeam.id,
+                date: currentDate,
+                time: MATCH_SLOTS[currentSlotIndex].time,
+                venue: 'Lapangan KARTA',
+                group,
+                round,
+                homeScore: 0,
+                awayScore: 0,
+                status: 'scheduled' as const
+              };
+              
+              matchesToCreate.push(match);
+              
+              // Pindah ke slot waktu berikutnya
+              currentSlotIndex = (currentSlotIndex + 1) % MATCH_SLOTS.length;
+              
+              // Jika sudah 3 pertandingan dalam sehari, pindah ke hari berikutnya
+              if (currentSlotIndex === 0) {
+                currentDate = addDays(currentDate, 1);
+              }
+            }
+            
+            // Rotasi tim (kecuali tim pertama)
+            const firstTeam = teamsForRound[0];
+            const lastTeam = teamsForRound[teamsForRound.length - 1];
+            for (let k = teamsForRound.length - 1; k > 1; k--) {
+              teamsForRound[k] = teamsForRound[k - 1];
+            }
+            teamsForRound[1] = lastTeam;
+          }
+          
+          // Tambah jeda 1 hari antara putaran
+          if (currentSlotIndex !== 0) {
+            currentDate = addDays(currentDate, 1);
+            currentSlotIndex = 0;
+          }
+          currentDate = addDays(currentDate, 1); // Jeda tambahan antara putaran
         }
         
-        // Tambah jeda 1 hari antar grup
-        currentDate = addDays(currentDate, 1);
+        // Tambah jeda 1 hari antara grup
+        if (currentSlotIndex !== 0) {
+          currentDate = addDays(currentDate, 1);
+          currentSlotIndex = 0;
+        }
+        currentDate = addDays(currentDate, 1); // Jeda tambahan antara grup
       }
       
       // Hapus jadwal yang ada
