@@ -25,7 +25,7 @@ Aplikasi manajemen turnamen sepak bola berbasis web.
 2. Hubungkan repositori GitHub Anda dengan Vercel
 3. Pilih repositori ini dan klik "Import"
 4. Vercel akan otomatis mendeteksi konfigurasi Vite dan melakukan deployment
-5. Setelah proses build selesai, aplikasi Anda akan tersedia di URL yang disediakan oleh Vercel
+5. Setelah proses build selesai, aplikasi Anda akan tersedia di URL yang disediakan oleh Vercel (https://kartacupv.vercel.app)
 
 ### Cara Manual
 
