@@ -180,6 +180,15 @@ export const addMatchToFirestore = async (match: Omit<Match, 'id' | 'goals' | 'c
   return matchDocRef.id;
 };
 
+export const deleteMatchFromFirestore = async (matchId: string): Promise<void> => {
+  try {
+    await deleteDoc(doc(db, 'matches', matchId));
+  } catch (error) {
+    console.error('Error deleting match:', error);
+    throw error;
+  }
+};
+
 // Goal operations
 export const addGoalToFirestore = async (goal: Omit<Goal, 'id'>): Promise<string> => {
   const goalDocRef = await addDoc(collection(db, COLLECTIONS.GOALS), goal);
