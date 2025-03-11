@@ -12,6 +12,8 @@ const Schedule = () => {
   const [showModal, setShowModal] = useState(false);
   const [startDate, setStartDate] = useState<string>('');
   const [startDateDisplay, setStartDateDisplay] = useState<string>('');
+  const [loadingMessage, setLoadingMessage] = useState<string>('Mempersiapkan pembuatan jadwal...');
+  const [loadingProgress, setLoadingProgress] = useState<number>(0);
 
   // Mengelompokkan pertandingan berdasarkan tanggal
   const matchesByDate = matches.reduce((acc, match) => {
@@ -42,13 +44,17 @@ const Schedule = () => {
       setStartDateDisplay(todayIndonesia);
     } catch (error) {
       console.error('Error saat membuka modal:', error);
-      // Tetap tampilkan modal meskipun ada error
-      setShowModal(true);
+      setError('Terjadi kesalahan saat membuka modal');
     }
   };
 
   const handleCloseModal = () => {
-    setShowModal(false);
+    if (!isGenerating) {
+      setShowModal(false);
+      setError(null);
+      setLoadingMessage('Mempersiapkan pembuatan jadwal...');
+      setLoadingProgress(0);
+    }
   };
 
   const handleDateChange = (e: any) => {
@@ -59,38 +65,58 @@ const Schedule = () => {
       // Konversi ke format ISO untuk backend
       const isoDate = convertToISODate(indonesiaDate);
       
-      // Hanya update startDate jika konversi berhasil
       if (isoDate) {
         setStartDate(isoDate);
+        setError(null);
       } else {
-        // Jika konversi gagal, kosongkan startDate
         setStartDate('');
+        setError('Format tanggal tidak valid. Gunakan format DD/MM/YYYY');
       }
     } catch (error) {
       console.error('Error saat mengubah tanggal:', error);
+      setError('Terjadi kesalahan saat mengubah tanggal');
       setStartDate('');
     }
   };
 
+  const updateLoadingProgress = () => {
+    setLoadingProgress(prev => {
+      if (prev >= 90) return prev;
+      return prev + 10;
+    });
+    
+    const messages = [
+      'Mempersiapkan pembuatan jadwal...',
+      'Mengatur grup dan tim...',
+      'Menghitung jarak antar pertandingan...',
+      'Menyusun jadwal pertandingan...',
+      'Memvalidasi jadwal...',
+      'Menyimpan jadwal ke database...'
+    ];
+    
+    setLoadingMessage(messages[Math.floor(loadingProgress / 20)] || messages[messages.length - 1]);
+  };
+
   const handleGenerateSchedule = async () => {
     try {
-      // Set state loading
       setIsGenerating(true);
       setError(null);
       setSuccess(null);
-      
-      // Tambahkan delay kecil untuk memastikan UI diperbarui
-      await new Promise(resolve => setTimeout(resolve, 100));
+      setLoadingProgress(0);
+      setLoadingMessage('Mempersiapkan pembuatan jadwal...');
       
       if (!startDate) {
         throw new Error('Silakan pilih tanggal mulai turnamen');
       }
+
+      // Mulai interval untuk update progress
+      const progressInterval = setInterval(updateLoadingProgress, 800);
       
       // Tambahkan timeout untuk mencegah operasi yang terlalu lama
       const timeoutPromise = new Promise((_, reject) => {
         setTimeout(() => {
           reject(new Error('Waktu pembuatan jadwal habis. Silakan coba lagi dengan tanggal yang berbeda.'));
-        }, 30000); // 30 detik timeout
+        }, 20000); // 20 detik timeout
       });
       
       // Race antara operasi asli dan timeout
@@ -99,34 +125,40 @@ const Schedule = () => {
         timeoutPromise
       ]);
       
-      setSuccess('Jadwal berhasil dibuat!');
-      setShowModal(false);
+      clearInterval(progressInterval);
+      setLoadingProgress(100);
+      setLoadingMessage('Jadwal berhasil dibuat!');
+      
+      // Tambahkan delay sebelum menutup modal
+      setTimeout(() => {
+        setSuccess('Jadwal berhasil dibuat!');
+        setShowModal(false);
+        setIsGenerating(false);
+        setLoadingProgress(0);
+        setLoadingMessage('Mempersiapkan pembuatan jadwal...');
+      }, 1000);
+      
     } catch (err: any) {
       console.error('Error saat membuat jadwal:', err);
       setError(err.message || 'Terjadi kesalahan saat membuat jadwal');
-      // Pastikan modal tetap terbuka jika terjadi error
-      setShowModal(true);
-    } finally {
-      // Pastikan state loading diatur kembali ke false
       setIsGenerating(false);
+      setLoadingProgress(0);
+      setLoadingMessage('Mempersiapkan pembuatan jadwal...');
     }
   };
 
   const handleClearSchedule = async () => {
     try {
-      // Set state loading
       setIsGenerating(true);
       setError(null);
       setSuccess(null);
-      
-      // Tambahkan delay kecil untuk memastikan UI diperbarui
-      await new Promise(resolve => setTimeout(resolve, 100));
+      setLoadingMessage('Menghapus jadwal...');
       
       // Tambahkan timeout untuk mencegah operasi yang terlalu lama
       const timeoutPromise = new Promise((_, reject) => {
         setTimeout(() => {
           reject(new Error('Waktu penghapusan jadwal habis. Silakan coba lagi.'));
-        }, 15000); // 15 detik timeout
+        }, 10000); // 10 detik timeout
       });
       
       // Race antara operasi asli dan timeout
@@ -140,7 +172,6 @@ const Schedule = () => {
       console.error('Error saat menghapus jadwal:', err);
       setError(err.message || 'Terjadi kesalahan saat menghapus jadwal');
     } finally {
-      // Pastikan state loading diatur kembali ke false
       setIsGenerating(false);
     }
   };
@@ -170,25 +201,25 @@ const Schedule = () => {
             <Calendar className="w-4 h-4 mr-2" />
             Generate Jadwal
           </button>
-        <button
+          <button
             onClick={handleClearSchedule}
             disabled={isGenerating || loading || matches.length === 0}
             className={`px-4 py-2 text-white rounded-md transition-colors flex items-center ${
               isGenerating || loading || matches.length === 0 ? 'bg-red-300 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'
             }`}
-        >
-          {isGenerating ? (
-            <>
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-              Menghapus...
-            </>
-          ) : (
-            <>
-              <Trash2 className="w-4 h-4 mr-2" />
-              Hapus Jadwal
-            </>
-          )}
-        </button>
+          >
+            {isGenerating ? (
+              <>
+                <Loader className="w-4 h-4 mr-2 animate-spin" />
+                Menghapus...
+              </>
+            ) : (
+              <>
+                <Trash2 className="w-4 h-4 mr-2" />
+                Hapus Jadwal
+              </>
+            )}
+          </button>
         </div>
       </div>
 
@@ -270,11 +301,22 @@ const Schedule = () => {
           <div className="bg-white rounded-lg p-6 w-full max-w-md relative">
             {/* Overlay loading */}
             {isGenerating && (
-              <div className="absolute inset-0 bg-white bg-opacity-90 flex flex-col items-center justify-center rounded-lg z-10">
-                <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-                <p className="text-blue-600 font-medium text-lg">Membuat Jadwal...</p>
-                <p className="text-gray-500 text-sm mt-2 text-center px-4">
-                  Mohon tunggu, ini mungkin memerlukan waktu beberapa saat.<br />
+              <div className="absolute inset-0 bg-white bg-opacity-95 flex flex-col items-center justify-center rounded-lg z-10">
+                <div className="w-20 h-20 relative mb-4">
+                  <div className="w-20 h-20 border-4 border-blue-200 border-t-blue-500 rounded-full animate-spin"></div>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-sm font-medium text-blue-500">{loadingProgress}%</span>
+                  </div>
+                </div>
+                <p className="text-blue-600 font-medium text-lg text-center">{loadingMessage}</p>
+                <div className="w-64 h-2 bg-blue-100 rounded-full mt-4 overflow-hidden">
+                  <div 
+                    className="h-full bg-blue-500 rounded-full transition-all duration-500"
+                    style={{ width: `${loadingProgress}%` }}
+                  ></div>
+                </div>
+                <p className="text-gray-500 text-sm mt-4 text-center px-4">
+                  Mohon tunggu, proses ini mungkin memerlukan waktu beberapa saat.<br />
                   Jangan tutup halaman ini.
                 </p>
               </div>
@@ -309,7 +351,7 @@ const Schedule = () => {
                 Jadwal pertandingan akan dimulai dari tanggal ini
               </p>
               <p className="text-xs text-blue-600 mt-1">
-                Format: DD/MM/YYYY (contoh: 01/01/2023)
+                Format: DD/MM/YYYY (contoh: 01/01/2024)
               </p>
             </div>
             
@@ -332,7 +374,7 @@ const Schedule = () => {
               >
                 {isGenerating ? (
                   <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                    <Loader className="w-4 h-4 mr-2 animate-spin" />
                     Membuat...
                   </>
                 ) : (
