@@ -110,37 +110,7 @@ interface TournamentContextType {
 }
 
 // Initial Teams
-const initialTeams: Team[] = [
-  // Group A
-  { id: 'teamA1', name: 'REMAJA PUTRA A', group: 'A', players: [] },
-  { id: 'teamA2', name: 'PALAPA A', group: 'A', players: [] },
-  { id: 'teamA3', name: 'TOXNET A', group: 'A', players: [] },
-  { id: 'teamA4', name: 'PERU FC B', group: 'A', players: [] },
-  { id: 'teamA5', name: 'LEMKA B', group: 'A', players: [] },
-  { id: 'teamA6', name: 'PORBA JAYA A', group: 'A', players: [] },
-  
-  // Group B
-  { id: 'teamB1', name: 'DL GUNS', group: 'B', players: [] },
-  { id: 'teamB2', name: 'TOXNET B', group: 'B', players: [] },
-  { id: 'teamB3', name: 'PORBA JAYA B', group: 'B', players: [] },
-  { id: 'teamB4', name: 'PUTRA MANDIRI B', group: 'B', players: [] },
-  { id: 'teamB5', name: 'REMAJA PUTRA B', group: 'B', players: [] },
-  
-  // Group C
-  { id: 'teamC1', name: 'GANESA A', group: 'C', players: [] },
-  { id: 'teamC2', name: 'REMAJA PUTRA C', group: 'C', players: [] },
-  { id: 'teamC3', name: 'PERU FC C', group: 'C', players: [] },
-  { id: 'teamC4', name: 'PERKID FC', group: 'C', players: [] },
-  { id: 'teamC5', name: 'PUTRA MANDIRI A', group: 'C', players: [] },
-  
-  // Group D
-  { id: 'teamD1', name: 'LEMKA A', group: 'D', players: [] },
-  { id: 'teamD2', name: 'BALPAS FC', group: 'D', players: [] },
-  { id: 'teamD3', name: 'ARUMBA FC', group: 'D', players: [] },
-  { id: 'teamD4', name: 'GANESA B', group: 'D', players: [] },
-  { id: 'teamD5', name: 'PERU FC A', group: 'D', players: [] },
-  { id: 'teamD6', name: 'PELANA FC', group: 'D', players: [] },
-];
+const initialTeams: Team[] = [];
 
 const initialContext: TournamentContextType = {
   teams: [],
