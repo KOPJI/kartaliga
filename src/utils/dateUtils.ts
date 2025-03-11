@@ -52,10 +52,21 @@ export const formatDateIndonesiaFull = (dateString: string): string => {
  */
 export const convertToISODate = (dateString: string): string => {
   try {
+    // Jika string kosong, kembalikan string kosong
+    if (!dateString || dateString.trim() === '') {
+      return '';
+    }
+    
     // Pastikan format dd/mm/yyyy
     const parts = dateString.split('/');
     if (parts.length !== 3) {
       console.warn('Format tanggal tidak valid, harus dd/mm/yyyy');
+      return '';
+    }
+    
+    // Pastikan semua bagian adalah angka
+    if (!/^\d+$/.test(parts[0]) || !/^\d+$/.test(parts[1]) || !/^\d+$/.test(parts[2])) {
+      console.warn('Tanggal, bulan, atau tahun harus berupa angka');
       return '';
     }
     
@@ -84,18 +95,31 @@ export const convertToISODate = (dateString: string): string => {
     }
     
     if (yearNum < 2000 || yearNum > 2100) {
-      console.warn('Nilai tahun tidak dalam rentang yang valid');
+      console.warn('Nilai tahun tidak dalam rentang yang valid (2000-2100)');
       return '';
     }
     
     // Cek validitas tanggal dengan membuat objek Date
-    const testDate = new Date(`${year}-${month}-${day}`);
+    const isoString = `${year}-${month}-${day}`;
+    const testDate = new Date(isoString);
+    
+    // Pastikan tanggal valid (misalnya, bukan 31 Februari)
     if (isNaN(testDate.getTime())) {
       console.warn('Tanggal tidak valid');
       return '';
     }
     
-    return `${year}-${month}-${day}`;
+    // Pastikan tanggal yang dihasilkan sesuai dengan input
+    // Ini menangani kasus seperti 31/04/2023 (April hanya memiliki 30 hari)
+    const resultDay = testDate.getDate().toString().padStart(2, '0');
+    const resultMonth = (testDate.getMonth() + 1).toString().padStart(2, '0');
+    
+    if (resultDay !== day || resultMonth !== month) {
+      console.warn('Tanggal tidak valid untuk bulan yang dipilih');
+      return '';
+    }
+    
+    return isoString;
   } catch (error) {
     console.error('Error saat mengkonversi tanggal:', error);
     return '';

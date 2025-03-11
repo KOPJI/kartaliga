@@ -82,11 +82,26 @@ const Schedule = () => {
         throw new Error('Silakan pilih tanggal mulai turnamen');
       }
       
-      await generateSchedule(startDate);
+      // Tambahkan timeout untuk mencegah operasi yang terlalu lama
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => {
+          reject(new Error('Waktu pembuatan jadwal habis. Silakan coba lagi dengan tanggal yang berbeda.'));
+        }, 15000); // 15 detik timeout
+      });
+      
+      // Race antara operasi asli dan timeout
+      await Promise.race([
+        generateSchedule(startDate),
+        timeoutPromise
+      ]);
+      
       setSuccess('Jadwal berhasil dibuat!');
       setShowModal(false);
     } catch (err: any) {
+      console.error('Error saat membuat jadwal:', err);
       setError(err.message || 'Terjadi kesalahan saat membuat jadwal');
+      // Pastikan modal tetap terbuka jika terjadi error
+      setShowModal(true);
     } finally {
       setIsGenerating(false);
     }
@@ -131,14 +146,14 @@ const Schedule = () => {
             <Calendar className="w-4 h-4 mr-2" />
             Generate Jadwal
           </button>
-          <button
+        <button
             onClick={handleClearSchedule}
             disabled={isGenerating || loading || matches.length === 0}
             className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center"
-          >
+        >
             <Trash2 className="w-4 h-4 mr-2" />
             Hapus Jadwal
-          </button>
+        </button>
         </div>
       </div>
 
@@ -222,11 +237,20 @@ const Schedule = () => {
               <h3 className="text-lg font-medium">Pilih Tanggal Mulai Turnamen</h3>
               <button 
                 onClick={handleCloseModal}
-                className="text-gray-500 hover:text-gray-700"
+                disabled={isGenerating}
+                className={`text-gray-500 hover:text-gray-700 ${isGenerating ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
+            
+            {isGenerating && (
+              <div className="absolute inset-0 bg-white bg-opacity-80 flex flex-col items-center justify-center rounded-lg z-10">
+                <Loader className="w-10 h-10 text-blue-600 animate-spin mb-4" />
+                <p className="text-blue-600 font-medium">Membuat Jadwal...</p>
+                <p className="text-gray-500 text-sm mt-2">Mohon tunggu, ini mungkin memerlukan waktu beberapa saat</p>
+              </div>
+            )}
             
             <div className="mb-6">
               <label className="block text-gray-700 text-sm font-medium mb-2">
@@ -237,7 +261,10 @@ const Schedule = () => {
                 placeholder="DD/MM/YYYY"
                 value={startDateDisplay}
                 onChange={handleDateChange}
-                className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                disabled={isGenerating}
+                className={`w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  isGenerating ? 'bg-gray-100 cursor-not-allowed' : ''
+                }`}
               />
               <p className="text-sm text-gray-500 mt-2">
                 Jadwal pertandingan akan dimulai dari tanggal ini
@@ -250,7 +277,10 @@ const Schedule = () => {
             <div className="flex justify-end space-x-3">
               <button
                 onClick={handleCloseModal}
-                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                disabled={isGenerating}
+                className={`px-4 py-2 border border-gray-300 rounded-md text-gray-700 ${
+                  isGenerating ? 'bg-gray-100 cursor-not-allowed' : 'hover:bg-gray-50'
+                }`}
               >
                 Batal
               </button>
@@ -258,7 +288,7 @@ const Schedule = () => {
                 onClick={handleGenerateSchedule}
                 disabled={isGenerating || !startDate}
                 className={`px-4 py-2 text-white rounded-md transition-colors flex items-center ${
-                  !startDate ? 'bg-blue-300 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
+                  !startDate || isGenerating ? 'bg-blue-300 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
                 }`}
               >
                 {isGenerating ? (
@@ -281,4 +311,4 @@ const Schedule = () => {
   );
 };
 
-export default Schedule; 
+export default Schedule;

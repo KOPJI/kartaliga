@@ -139,7 +139,7 @@ const Matches = () => {
             </div>
           </div>
           
-          <div>
+        <div>
             <h3 className="text-sm font-medium text-gray-500 mb-2">Pertandingan per Grup</h3>
             <div className="space-y-1">
               {Object.entries(matchesByGroup).sort(([a], [b]) => a.localeCompare(b)).map(([group, count]) => (
@@ -158,11 +158,11 @@ const Matches = () => {
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1">
             <div className="relative">
-              <input
-                type="text"
+            <input
+              type="text"
                 placeholder="Cari pertandingan..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <Search className="absolute left-3 top-2.5 w-5 h-5 text-gray-400" />
@@ -184,21 +184,21 @@ const Matches = () => {
             </div>
             
             <div>
-              <select
-                value={filterGroup || ''}
-                onChange={(e) => setFilterGroup(e.target.value || null)}
+            <select
+              value={filterGroup || ''}
+              onChange={(e) => setFilterGroup(e.target.value || null)}
                 className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Semua Grup</option>
+            >
+              <option value="">Semua Grup</option>
                 {uniqueGroups.map(group => (
                   <option key={group} value={group}>Grup {group}</option>
                 ))}
-              </select>
+            </select>
             </div>
           </div>
         </div>
       </div>
-
+      
       {/* Daftar Pertandingan */}
       <div className="space-y-4">
         {filteredMatches.length === 0 ? (
@@ -223,11 +223,11 @@ const Matches = () => {
                       {match.status === 'completed' ? 'Selesai' :
                        match.status === 'scheduled' ? 'Dijadwalkan' :
                        'Dibatalkan'}
-                    </span>
+                        </span>
                   </div>
                 </div>
-              </div>
-              
+                    </div>
+                    
               <div className="p-6">
                 <div className="flex flex-col md:flex-row items-center justify-between">
                   <div className="flex-1 text-center md:text-right mb-4 md:mb-0">
@@ -249,22 +249,22 @@ const Matches = () => {
                     {match.status === 'completed' && (
                       <span className="text-3xl font-bold">{match.awayScore}</span>
                     )}
-                  </div>
-                </div>
-              </div>
-              
+                      </div>
+                      </div>
+                    </div>
+                  
               <div className="bg-gray-50 px-6 py-3 flex justify-between items-center">
                 <div className="text-sm text-gray-600">
-                  {match.venue}
-                </div>
+                      {match.venue}
+                    </div>
                 <Link to={`/matches/${match.id}`} className="text-blue-600 hover:text-blue-800 flex items-center text-sm">
                   Detail <ChevronRight className="w-4 h-4 ml-1" />
                 </Link>
-              </div>
-            </div>
+          </div>
+        </div>
           ))
         )}
-      </div>
+        </div>
     </div>
   );
 };
