@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, RouteProps } from 'react-router-dom';
 import { TournamentProvider } from './context/TournamentContext';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
@@ -17,12 +17,16 @@ function App() {
     <TournamentProvider>
       <Router>
         <Routes>
-          <Route element={<Layout />}>
+          <Route path="/" element={<Layout />}>
             <Route index element={<Dashboard />} />
-            <Route path="teams" element={<Teams />} />
-            <Route path="teams/:id" element={<TeamDetail />} />
-            <Route path="matches" element={<Matches />} />
-            <Route path="matches/:id" element={<MatchDetail />} />
+            <Route path="teams">
+              <Route index element={<Teams />} />
+              <Route path=":id" element={<TeamDetail />} />
+            </Route>
+            <Route path="matches">
+              <Route index element={<Matches />} />
+              <Route path=":id" element={<MatchDetail />} />
+            </Route>
             <Route path="standings" element={<Standings />} />
             <Route path="statistics" element={<Statistics />} />
           </Route>
