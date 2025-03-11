@@ -51,17 +51,55 @@ export const formatDateIndonesiaFull = (dateString: string): string => {
  * Fungsi untuk mengkonversi format dd/mm/yyyy ke format ISO (yyyy-mm-dd)
  */
 export const convertToISODate = (dateString: string): string => {
-  // Pastikan format dd/mm/yyyy
-  const parts = dateString.split('/');
-  if (parts.length !== 3) {
+  try {
+    // Pastikan format dd/mm/yyyy
+    const parts = dateString.split('/');
+    if (parts.length !== 3) {
+      console.warn('Format tanggal tidak valid, harus dd/mm/yyyy');
+      return '';
+    }
+    
+    const day = parts[0].padStart(2, '0');
+    const month = parts[1].padStart(2, '0');
+    const year = parts[2];
+    
+    // Validasi nilai tanggal, bulan, dan tahun
+    const dayNum = parseInt(day, 10);
+    const monthNum = parseInt(month, 10);
+    const yearNum = parseInt(year, 10);
+    
+    if (isNaN(dayNum) || isNaN(monthNum) || isNaN(yearNum)) {
+      console.warn('Nilai tanggal, bulan, atau tahun tidak valid');
+      return '';
+    }
+    
+    if (dayNum < 1 || dayNum > 31) {
+      console.warn('Nilai tanggal harus antara 1-31');
+      return '';
+    }
+    
+    if (monthNum < 1 || monthNum > 12) {
+      console.warn('Nilai bulan harus antara 1-12');
+      return '';
+    }
+    
+    if (yearNum < 2000 || yearNum > 2100) {
+      console.warn('Nilai tahun tidak dalam rentang yang valid');
+      return '';
+    }
+    
+    // Cek validitas tanggal dengan membuat objek Date
+    const testDate = new Date(`${year}-${month}-${day}`);
+    if (isNaN(testDate.getTime())) {
+      console.warn('Tanggal tidak valid');
+      return '';
+    }
+    
+    return `${year}-${month}-${day}`;
+  } catch (error) {
+    console.error('Error saat mengkonversi tanggal:', error);
     return '';
   }
-  
-  const day = parts[0];
-  const month = parts[1];
-  const year = parts[2];
-  
-  return `${year}-${month}-${day}`;
 };
 
 /**

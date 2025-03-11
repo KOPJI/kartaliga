@@ -28,12 +28,23 @@ const Schedule = () => {
   });
 
   const handleOpenModal = () => {
-    setShowModal(true);
-    // Set default tanggal ke hari ini
-    const today = new Date();
-    const formattedDate = today.toISOString().split('T')[0];
-    setStartDate(formattedDate);
-    setStartDateDisplay(getTodayIndonesiaFormat());
+    try {
+      setShowModal(true);
+      setError(null);
+      
+      // Set default tanggal ke hari ini
+      const today = new Date();
+      const formattedDate = today.toISOString().split('T')[0];
+      setStartDate(formattedDate);
+      
+      // Set tampilan tanggal dalam format Indonesia
+      const todayIndonesia = getTodayIndonesiaFormat();
+      setStartDateDisplay(todayIndonesia);
+    } catch (error) {
+      console.error('Error saat membuka modal:', error);
+      // Tetap tampilkan modal meskipun ada error
+      setShowModal(true);
+    }
   };
 
   const handleCloseModal = () => {
@@ -41,12 +52,24 @@ const Schedule = () => {
   };
 
   const handleDateChange = (e: any) => {
-    const indonesiaDate = e.target.value;
-    setStartDateDisplay(indonesiaDate);
-    
-    // Konversi ke format ISO untuk backend
-    const isoDate = convertToISODate(indonesiaDate);
-    setStartDate(isoDate);
+    try {
+      const indonesiaDate = e.target.value;
+      setStartDateDisplay(indonesiaDate);
+      
+      // Konversi ke format ISO untuk backend
+      const isoDate = convertToISODate(indonesiaDate);
+      
+      // Hanya update startDate jika konversi berhasil
+      if (isoDate) {
+        setStartDate(isoDate);
+      } else {
+        // Jika konversi gagal, kosongkan startDate
+        setStartDate('');
+      }
+    } catch (error) {
+      console.error('Error saat mengubah tanggal:', error);
+      setStartDate('');
+    }
   };
 
   const handleGenerateSchedule = async () => {
@@ -219,6 +242,9 @@ const Schedule = () => {
               <p className="text-sm text-gray-500 mt-2">
                 Jadwal pertandingan akan dimulai dari tanggal ini
               </p>
+              <p className="text-xs text-blue-600 mt-1">
+                Format: DD/MM/YYYY (contoh: 01/01/2023)
+              </p>
             </div>
             
             <div className="flex justify-end space-x-3">
@@ -231,7 +257,9 @@ const Schedule = () => {
               <button
                 onClick={handleGenerateSchedule}
                 disabled={isGenerating || !startDate}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center"
+                className={`px-4 py-2 text-white rounded-md transition-colors flex items-center ${
+                  !startDate ? 'bg-blue-300 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
+                }`}
               >
                 {isGenerating ? (
                   <>
