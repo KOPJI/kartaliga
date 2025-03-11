@@ -96,7 +96,8 @@ export const addPlayerToFirestore = async (player: Omit<Player, 'id'>): Promise<
 };
 
 export const updatePlayerInFirestore = async (player: Player): Promise<void> => {
-  await updateDoc(doc(db, COLLECTIONS.PLAYERS, player.id), player);
+  const { id, ...playerData } = player;
+  await updateDoc(doc(db, COLLECTIONS.PLAYERS, id), playerData);
 };
 
 export const deletePlayerFromFirestore = async (playerId: string): Promise<void> => {
