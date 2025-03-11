@@ -48,7 +48,7 @@ function App() {
           
           <footer className="bg-green-800 text-white p-4 mt-8">
             <div className="container mx-auto text-center">
-              <p>Karta Cup V © 2024 - Aplikasi Manajemen Turnamen Sepak Bola</p>
+              <p>Karta Cup V © 2025 - Aplikasi Manajemen Turnamen Sepak Bola</p>
             </div>
           </footer>
         </div>
