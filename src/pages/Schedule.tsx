@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useTournament } from '../context/TournamentContext';
-import { Calendar, Trash2, Loader, Clock, MapPin, Users } from 'lucide-react';
+import { Calendar, Trash2, Loader, Clock, MapPin, Users, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const Schedule = () => {
@@ -8,6 +8,8 @@ const Schedule = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [showModal, setShowModal] = useState(false);
+  const [startDate, setStartDate] = useState<string>('');
 
   // Mengelompokkan pertandingan berdasarkan tanggal
   const matchesByDate = matches.reduce((acc, match) => {
@@ -23,13 +25,31 @@ const Schedule = () => {
     return new Date(a).getTime() - new Date(b).getTime();
   });
 
+  const handleOpenModal = () => {
+    setShowModal(true);
+    // Set default tanggal ke hari ini
+    const today = new Date();
+    const formattedDate = today.toISOString().split('T')[0];
+    setStartDate(formattedDate);
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+  };
+
   const handleGenerateSchedule = async () => {
     try {
       setIsGenerating(true);
       setError(null);
       setSuccess(null);
-      await generateSchedule();
+      
+      if (!startDate) {
+        throw new Error('Silakan pilih tanggal mulai turnamen');
+      }
+      
+      await generateSchedule(startDate);
       setSuccess('Jadwal berhasil dibuat!');
+      setShowModal(false);
     } catch (err: any) {
       setError(err.message || 'Terjadi kesalahan saat membuat jadwal');
     } finally {
@@ -75,21 +95,12 @@ const Schedule = () => {
         </div>
         <div className="flex space-x-3 mt-4 md:mt-0">
           <button
-            onClick={handleGenerateSchedule}
+            onClick={handleOpenModal}
             disabled={isGenerating || loading}
             className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors flex items-center"
           >
-            {isGenerating ? (
-              <>
-                <Loader className="w-4 h-4 mr-2 animate-spin" />
-                Membuat Jadwal...
-              </>
-            ) : (
-              <>
-                <Calendar className="w-4 h-4 mr-2" />
-                Generate Jadwal
-              </>
-            )}
+            <Calendar className="w-4 h-4 mr-2" />
+            Generate Jadwal
           </button>
           <button
             onClick={handleClearSchedule}
@@ -171,6 +182,64 @@ const Schedule = () => {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Modal Kalender */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium">Pilih Tanggal Mulai Turnamen</h3>
+              <button 
+                onClick={handleCloseModal}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="mb-6">
+              <label className="block text-gray-700 text-sm font-medium mb-2">
+                Tanggal Mulai
+              </label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <p className="text-sm text-gray-500 mt-2">
+                Jadwal pertandingan akan dimulai dari tanggal ini
+              </p>
+            </div>
+            
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={handleCloseModal}
+                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleGenerateSchedule}
+                disabled={isGenerating || !startDate}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center"
+              >
+                {isGenerating ? (
+                  <>
+                    <Loader className="w-4 h-4 mr-2 animate-spin" />
+                    Membuat Jadwal...
+                  </>
+                ) : (
+                  <>
+                    <Calendar className="w-4 h-4 mr-2" />
+                    Buat Jadwal
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

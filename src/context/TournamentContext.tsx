@@ -356,7 +356,7 @@ interface TournamentContextType {
   getPlayerById: (playerId: string) => Player | undefined;
   
   // Match functions
-  generateSchedule: () => Promise<void>;
+  generateSchedule: (startDateStr?: string) => Promise<void>;
   clearSchedule: () => Promise<void>;
   updateMatch: (match: Match) => Promise<void>;
   recordGoal: (goal: Omit<Goal, 'id'>) => Promise<void>;
@@ -579,16 +579,32 @@ export const TournamentProvider = ({ children }: { children: any }) => {
   };
 
   // Match functions
-  const generateSchedule = async () => {
+  const generateSchedule = async (startDateStr: string = '') => {
     try {
-      const teamsByGroup = teams.reduce((acc, team) => {
-        if (!acc[team.group]) acc[team.group] = [];
-        acc[team.group].push(team);
-        return acc;
-      }, {} as Record<string, Team[]>);
+      setLoading(true);
       
+      // Gunakan tanggal yang diberikan atau default ke hari ini
+      let startDate = startDateStr ? new Date(startDateStr) : new Date();
+      
+      // Pastikan startDate valid
+      if (isNaN(startDate.getTime())) {
+        startDate = new Date();
+      }
+      
+      // Hapus jadwal yang ada terlebih dahulu
+      await clearSchedule();
+      
+      // Grup tim berdasarkan grup
+      const teamsByGroup: Record<string, Team[]> = {};
+      teams.forEach(team => {
+        if (!teamsByGroup[team.group]) {
+          teamsByGroup[team.group] = [];
+        }
+        teamsByGroup[team.group].push(team);
+      });
+
       const matchesToCreate: Omit<Match, 'id' | 'goals' | 'cards'>[] = [];
-      let currentDate = new Date().toISOString().split('T')[0];
+      let currentDate = startDate.toISOString().split('T')[0];
       let currentSlotIndex = 0;
       let maxAttempts = 150; // Tingkatkan maksimum percobaan
       
@@ -701,6 +717,8 @@ export const TournamentProvider = ({ children }: { children: any }) => {
     } catch (error) {
       console.error('Error generating match schedule:', error);
       throw error;
+    } finally {
+      setLoading(false);
     }
   };
 
