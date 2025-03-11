@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useTournament } from '../context/TournamentContext';
 import { initializeTeamsToFirestore, initializePlayersToFirestore } from '../firebase/firestore';
 import { CircleAlert, Check, Loader } from 'lucide-react';

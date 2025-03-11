@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useTournament } from '../context/TournamentContext';
 import { Squircle, Calendar, ChevronDown, Clock, MapPin, Play, Plus } from 'lucide-react';
 

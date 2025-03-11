@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTournament } from '../context/TournamentContext';
 import { Award, ChartBar, ChevronRight, Filter, TrendingUp, Trophy, UserCheck } from 'lucide-react';

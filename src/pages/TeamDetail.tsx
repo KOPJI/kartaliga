@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTournament, Player } from '../context/TournamentContext';
 import { ArrowLeft, Pencil, Plus, Save, Trash2, User, UserPlus, Users } from 'lucide-react';
@@ -19,22 +19,19 @@ const TeamDetail = () => {
     name: '',
     number: 1,
     position: 'Penyerang',
-    teamId: id || '',
   });
 
   useEffect(() => {
-    if (!team) {
-      navigate('/teams');
+    if (team) {
+      setTeamData({
+        name: team.name,
+        group: team.group,
+      });
     }
-  }, [team, navigate]);
+  }, [team]);
 
   const handleTeamUpdate = () => {
     if (!team) return;
-    
-    if (teamData.name.trim() === '') {
-      alert('Nama tim tidak boleh kosong');
-      return;
-    }
     
     updateTeam({
       ...team,
@@ -46,15 +43,13 @@ const TeamDetail = () => {
   };
 
   const handleDeleteTeam = () => {
-    if (!team) return;
-    
-    if (window.confirm(`Anda yakin ingin menghapus tim ${team.name}?`)) {
-      deleteTeam(team.id);
+    if (window.confirm(`Apakah Anda yakin ingin menghapus tim ${team?.name}?`)) {
+      deleteTeam(team?.id || '');
       navigate('/teams');
     }
   };
 
-  const handleAddPlayer = (e: React.FormEvent) => {
+  const handleAddPlayer = (e: any) => {
     e.preventDefault();
     
     if (newPlayer.name.trim() === '') {
@@ -64,22 +59,22 @@ const TeamDetail = () => {
     
     addPlayer({
       name: newPlayer.name,
-      number: Number(newPlayer.number),
+      number: newPlayer.number,
       position: newPlayer.position,
-      teamId: id || '',
+      teamId: team?.id || '',
     });
     
     setNewPlayer({
       name: '',
       number: 1,
       position: 'Penyerang',
-      teamId: id || '',
     });
+    
     setIsAddingPlayer(false);
   };
 
   const handleDeletePlayer = (playerId: string) => {
-    if (window.confirm('Anda yakin ingin menghapus pemain ini?')) {
+    if (window.confirm('Apakah Anda yakin ingin menghapus pemain ini?')) {
       deletePlayer(playerId);
     }
   };
