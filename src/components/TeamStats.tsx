@@ -20,7 +20,7 @@ interface TeamStats {
 const calculateTeamStats = (team: Team, matches: Match[]): TeamStats => {
   // Filter pertandingan untuk tim ini
   const teamMatches = matches.filter(
-    match => match.homeTeamId === team.id || match.awayTeamId === team.id
+    match => match.team1Id === team.id || match.team2Id === team.id
   ).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   // Jika tidak ada pertandingan, kembalikan nilai default

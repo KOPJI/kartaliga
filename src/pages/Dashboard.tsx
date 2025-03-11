@@ -154,8 +154,8 @@ const Dashboard = () => {
             
             <div className="divide-y divide-gray-200">
               {upcomingMatches.map(match => {
-                const homeTeam = teams.find(t => t.id === match.homeTeamId);
-                const awayTeam = teams.find(t => t.id === match.awayTeamId);
+                const homeTeam = teams.find(t => t.id === match.team1Id);
+                const awayTeam = teams.find(t => t.id === match.team2Id);
                 
                 return (
                   <div key={match.id} className="p-4 hover:bg-gray-50">

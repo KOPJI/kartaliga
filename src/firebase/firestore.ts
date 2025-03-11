@@ -189,8 +189,8 @@ export const updateMatchInFirestore = async (match: Match): Promise<void> => {
 export const addMatchToFirestore = async (match: Omit<Match, 'id' | 'goals' | 'cards'>): Promise<string> => {
   const matchDocRef = await addDoc(collection(db, COLLECTIONS.MATCHES), {
     ...match,
-    homeScore: match.homeScore || 0,
-    awayScore: match.awayScore || 0
+    team1Score: match.team1Score || 0,
+    team2Score: match.team2Score || 0
   });
   return matchDocRef.id;
 };

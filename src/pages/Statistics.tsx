@@ -257,8 +257,8 @@ const Statistics = () => {
               .sort((a, b) => b.goals.length - a.goals.length)
               .slice(0, 5)
               .map(match => {
-                const homeTeam = teams.find(t => t.id === match.homeTeamId);
-                const awayTeam = teams.find(t => t.id === match.awayTeamId);
+                const team1 = teams.find(t => t.id === match.team1Id);
+                const team2 = teams.find(t => t.id === match.team2Id);
                 const goals = match.goals.length;
                 const cards = match.cards.length;
                 
@@ -280,11 +280,11 @@ const Statistics = () => {
                     </div>
                     
                     <div className="flex items-center justify-between">
-                      <div className="font-medium">{homeTeam?.name}</div>
+                      <div className="font-medium">{team1?.name}</div>
                       <div className="text-xl font-bold px-3">
-                        {match.homeScore} - {match.awayScore}
+                        {match.team1Score} - {match.team2Score}
                       </div>
-                      <div className="font-medium">{awayTeam?.name}</div>
+                      <div className="font-medium">{team2?.name}</div>
                     </div>
                     
                     <div className="mt-2 flex justify-between text-sm text-gray-500">

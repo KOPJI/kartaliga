@@ -24,27 +24,24 @@ const MatchDetail = () => {
   const [showCardAccumulation, setShowCardAccumulation] = useState(false);
   
   const [matchData, setMatchData] = useState({
-    homeScore: 0,
-    awayScore: 0,
-    status: 'scheduled' as 'scheduled' | 'completed' | 'cancelled',
-    date: '',
-    time: '',
-    venue: ''
+    team1Score: match?.team1Score || 0,
+    team2Score: match?.team2Score || 0,
+    status: match?.status || 'scheduled'
   });
   
-  const [newGoal, setNewGoal] = useState({
-    teamId: '',
-    playerId: '',
-    minute: 1,
-    isOwnGoal: false
-  });
+  const [selectedTeam, setSelectedTeam] = useState(match?.team1Id || '');
+  const team1 = teams.find(t => t.id === match?.team1Id);
+  const team2 = teams.find(t => t.id === match?.team2Id);
+
+  // Statistik pertandingan
+  const goals = match?.goals || [];
+  const cards = match?.cards || [];
   
-  const [newCard, setNewCard] = useState({
-    teamId: '',
-    playerId: '',
-    type: 'yellow' as 'yellow' | 'red',
-    minute: 1
-  });
+  const team1Goals = goals.filter(goal => goal.teamId === match?.team1Id);
+  const team2Goals = goals.filter(goal => goal.teamId === match?.team2Id);
+  
+  const team1Cards = cards.filter(card => card.teamId === match?.team1Id);
+  const team2Cards = cards.filter(card => card.teamId === match?.team2Id);
 
   useEffect(() => {
     if (!match) {
@@ -53,18 +50,14 @@ const MatchDetail = () => {
     }
     
     setMatchData({
-      homeScore: match.homeScore || 0,
-      awayScore: match.awayScore || 0,
-      status: match.status,
-      date: match.date,
-      time: match.time,
-      venue: match.venue
+      team1Score: match.team1Score || 0,
+      team2Score: match.team2Score || 0,
+      status: match.status
     });
     
     // Initialize new goal and card with the home team selected by default
-    if (match && match.homeTeamId) {
-      setNewGoal(prev => ({ ...prev, teamId: match.homeTeamId }));
-      setNewCard(prev => ({ ...prev, teamId: match.homeTeamId }));
+    if (match && match.team1Id) {
+      setSelectedTeam(match.team1Id);
     }
   }, [match, navigate]);
 
@@ -72,17 +65,12 @@ const MatchDetail = () => {
     return <div>Sedang memuat...</div>;
   }
 
-  const homeTeam = getTeamById(match.homeTeamId);
-  const awayTeam = getTeamById(match.awayTeamId);
+  const team1 = getTeamById(match.team1Id);
+  const team2 = getTeamById(match.team2Id);
   
-  if (!homeTeam || !awayTeam) {
+  if (!team1 || !team2) {
     return <div>Error: Tim tidak ditemukan</div>;
   }
-
-  const homeGoals = match.goals.filter(g => g.teamId === match.homeTeamId);
-  const awayGoals = match.goals.filter(g => g.teamId === match.awayTeamId);
-  const homeCards = match.cards.filter(c => c.teamId === match.homeTeamId);
-  const awayCards = match.cards.filter(c => c.teamId === match.awayTeamId);
 
   // Check card accumulation for each player
   const calculateCardAccumulation = () => {
@@ -133,40 +121,31 @@ const MatchDetail = () => {
   const cardAccumulation = calculateCardAccumulation();
 
   const handleSaveMatch = () => {
+    if (!match) return;
+    
     updateMatch({
       ...match,
-      homeScore: matchData.homeScore,
-      awayScore: matchData.awayScore,
-      status: matchData.status,
-      date: matchData.date,
-      time: matchData.time,
-      venue: matchData.venue
+      team1Score: matchData.team1Score,
+      team2Score: matchData.team2Score,
+      status: matchData.status
     });
+    
     setIsEditing(false);
   };
 
   const handleAddGoal = () => {
-    if (!newGoal.playerId) {
-      alert('Pilih pemain pencetak gol');
-      return;
-    }
+    if (!match || !selectedPlayer || !selectedMinute) return;
     
     recordGoal({
       matchId: match.id,
-      teamId: newGoal.teamId,
-      playerId: newGoal.playerId,
-      minute: newGoal.minute,
-      isOwnGoal: newGoal.isOwnGoal
+      playerId: selectedPlayer,
+      teamId: selectedTeam,
+      minute: parseInt(selectedMinute)
     });
     
-    setNewGoal({
-      teamId: match.homeTeamId,
-      playerId: '',
-      minute: 1,
-      isOwnGoal: false
-    });
-    
-    setIsAddingGoal(false);
+    setSelectedTeam(match.team1Id);
+    setSelectedPlayer('');
+    setSelectedMinute('');
   };
 
   const handleAddCard = () => {
@@ -184,7 +163,7 @@ const MatchDetail = () => {
     });
     
     setNewCard({
-      teamId: match.homeTeamId,
+      teamId: match.team1Id,
       playerId: '',
       type: 'yellow',
       minute: 1
@@ -210,7 +189,7 @@ const MatchDetail = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="container mx-auto px-4 py-8">
       <div className="flex items-center gap-2">
         <button
           onClick={() => navigate('/matches')}
@@ -255,10 +234,10 @@ const MatchDetail = () => {
         {/* Match info */}
         <div className="grid grid-cols-7 gap-4 items-center">
           <div className="col-span-3 text-center">
-            <Link to={`/teams/${homeTeam.id}`} className="font-bold text-xl mb-1 block hover:text-green-700">
-              {homeTeam.name}
+            <Link to={`/teams/${team1.id}`} className="font-bold text-xl mb-1 block hover:text-green-700">
+              {team1.name}
             </Link>
-            <div className="text-sm text-gray-500">{homeTeam.players.length} Pemain</div>
+            <div className="text-sm text-gray-500">{team1.players.length} Pemain</div>
           </div>
           
           <div className="col-span-1 text-center">

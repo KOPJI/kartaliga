@@ -274,8 +274,8 @@ const Schedule = () => {
                         </div>
                         <div className="flex flex-col md:flex-row md:items-center">
                           <div className="text-right md:w-1/3">
-                            <Link to={`/teams/${match.homeTeamId}`} className="font-medium hover:text-blue-600">
-                              {getTeamName(match.homeTeamId)}
+                            <Link to={`/teams/${match.team1Id}`} className="font-medium hover:text-blue-600">
+                              {getTeamName(match.team1Id)}
                             </Link>
                           </div>
                           <div className="mx-4 my-2 md:my-0 text-center">
@@ -284,8 +284,8 @@ const Schedule = () => {
                             </span>
                           </div>
                           <div className="md:w-1/3">
-                            <Link to={`/teams/${match.awayTeamId}`} className="font-medium hover:text-blue-600">
-                              {getTeamName(match.awayTeamId)}
+                            <Link to={`/teams/${match.team2Id}`} className="font-medium hover:text-blue-600">
+                              {getTeamName(match.team2Id)}
                             </Link>
                           </div>
                         </div>

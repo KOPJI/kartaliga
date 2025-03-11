@@ -36,11 +36,11 @@ const Matches = () => {
   // Filter matches based on criteria
   const filteredMatches = matches.filter(match => {
     // Filter by search term (match team names)
-    const homeTeam = teams.find(team => team.id === match.homeTeamId);
-    const awayTeam = teams.find(team => team.id === match.awayTeamId);
+    const team1 = teams.find(team => team.id === match.team1Id);
+    const team2 = teams.find(team => team.id === match.team2Id);
     const matchesSearch = 
-      homeTeam?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      awayTeam?.name.toLowerCase().includes(searchTerm.toLowerCase());
+      team1?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      team2?.name.toLowerCase().includes(searchTerm.toLowerCase());
     
     // Filter by group
     const matchesGroup = filterGroup === null || match.group === filterGroup;
@@ -231,9 +231,9 @@ const Matches = () => {
               <div className="p-6">
                 <div className="flex flex-col md:flex-row items-center justify-between">
                   <div className="flex-1 text-center md:text-right mb-4 md:mb-0">
-                    <h3 className="font-semibold text-lg">{getTeamName(match.homeTeamId)}</h3>
+                    <h3 className="font-semibold text-lg">{getTeamName(match.team1Id)}</h3>
                     {match.status === 'completed' && (
-                      <span className="text-3xl font-bold">{match.homeScore}</span>
+                      <span className="text-3xl font-bold">{match.team1Score}</span>
                     )}
                   </div>
                   
@@ -245,9 +245,9 @@ const Matches = () => {
                   </div>
                   
                   <div className="flex-1 text-center md:text-left">
-                    <h3 className="font-semibold text-lg">{getTeamName(match.awayTeamId)}</h3>
+                    <h3 className="font-semibold text-lg">{getTeamName(match.team2Id)}</h3>
                     {match.status === 'completed' && (
-                      <span className="text-3xl font-bold">{match.awayScore}</span>
+                      <span className="text-3xl font-bold">{match.team2Score}</span>
                     )}
                       </div>
                       </div>
