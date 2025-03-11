@@ -74,9 +74,13 @@ const Schedule = () => {
 
   const handleGenerateSchedule = async () => {
     try {
+      // Set state loading
       setIsGenerating(true);
       setError(null);
       setSuccess(null);
+      
+      // Tambahkan delay kecil untuk memastikan UI diperbarui
+      await new Promise(resolve => setTimeout(resolve, 100));
       
       if (!startDate) {
         throw new Error('Silakan pilih tanggal mulai turnamen');
@@ -86,7 +90,7 @@ const Schedule = () => {
       const timeoutPromise = new Promise((_, reject) => {
         setTimeout(() => {
           reject(new Error('Waktu pembuatan jadwal habis. Silakan coba lagi dengan tanggal yang berbeda.'));
-        }, 15000); // 15 detik timeout
+        }, 30000); // 30 detik timeout
       });
       
       // Race antara operasi asli dan timeout
@@ -103,20 +107,40 @@ const Schedule = () => {
       // Pastikan modal tetap terbuka jika terjadi error
       setShowModal(true);
     } finally {
+      // Pastikan state loading diatur kembali ke false
       setIsGenerating(false);
     }
   };
 
   const handleClearSchedule = async () => {
     try {
+      // Set state loading
       setIsGenerating(true);
       setError(null);
       setSuccess(null);
-      await clearSchedule();
+      
+      // Tambahkan delay kecil untuk memastikan UI diperbarui
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Tambahkan timeout untuk mencegah operasi yang terlalu lama
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => {
+          reject(new Error('Waktu penghapusan jadwal habis. Silakan coba lagi.'));
+        }, 15000); // 15 detik timeout
+      });
+      
+      // Race antara operasi asli dan timeout
+      await Promise.race([
+        clearSchedule(),
+        timeoutPromise
+      ]);
+      
       setSuccess('Jadwal berhasil dihapus!');
     } catch (err: any) {
+      console.error('Error saat menghapus jadwal:', err);
       setError(err.message || 'Terjadi kesalahan saat menghapus jadwal');
     } finally {
+      // Pastikan state loading diatur kembali ke false
       setIsGenerating(false);
     }
   };
@@ -149,10 +173,21 @@ const Schedule = () => {
         <button
             onClick={handleClearSchedule}
             disabled={isGenerating || loading || matches.length === 0}
-            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center"
+            className={`px-4 py-2 text-white rounded-md transition-colors flex items-center ${
+              isGenerating || loading || matches.length === 0 ? 'bg-red-300 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'
+            }`}
         >
-            <Trash2 className="w-4 h-4 mr-2" />
-            Hapus Jadwal
+          {isGenerating ? (
+            <>
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+              Menghapus...
+            </>
+          ) : (
+            <>
+              <Trash2 className="w-4 h-4 mr-2" />
+              Hapus Jadwal
+            </>
+          )}
         </button>
         </div>
       </div>
@@ -232,7 +267,19 @@ const Schedule = () => {
       {/* Modal Kalender */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md relative">
+            {/* Overlay loading */}
+            {isGenerating && (
+              <div className="absolute inset-0 bg-white bg-opacity-90 flex flex-col items-center justify-center rounded-lg z-10">
+                <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                <p className="text-blue-600 font-medium text-lg">Membuat Jadwal...</p>
+                <p className="text-gray-500 text-sm mt-2 text-center px-4">
+                  Mohon tunggu, ini mungkin memerlukan waktu beberapa saat.<br />
+                  Jangan tutup halaman ini.
+                </p>
+              </div>
+            )}
+
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-medium">Pilih Tanggal Mulai Turnamen</h3>
               <button 
@@ -243,14 +290,6 @@ const Schedule = () => {
                 <X className="w-5 h-5" />
               </button>
             </div>
-            
-            {isGenerating && (
-              <div className="absolute inset-0 bg-white bg-opacity-80 flex flex-col items-center justify-center rounded-lg z-10">
-                <Loader className="w-10 h-10 text-blue-600 animate-spin mb-4" />
-                <p className="text-blue-600 font-medium">Membuat Jadwal...</p>
-                <p className="text-gray-500 text-sm mt-2">Mohon tunggu, ini mungkin memerlukan waktu beberapa saat</p>
-              </div>
-            )}
             
             <div className="mb-6">
               <label className="block text-gray-700 text-sm font-medium mb-2">
@@ -293,8 +332,8 @@ const Schedule = () => {
               >
                 {isGenerating ? (
                   <>
-                    <Loader className="w-4 h-4 mr-2 animate-spin" />
-                    Membuat Jadwal...
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                    Membuat...
                   </>
                 ) : (
                   <>
