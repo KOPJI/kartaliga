@@ -209,13 +209,26 @@ export const addCardToFirestore = async (card: Omit<Card, 'id'>): Promise<string
 
 // Initialize data
 export const initializeTeamsToFirestore = async (teams: Team[]): Promise<void> => {
-  const batch = writeBatch(db);
+  // Cek apakah sudah ada data tim di Firestore
+  const teamsCollection = collection(db, COLLECTIONS.TEAMS);
+  const teamsSnapshot = await getDocs(teamsCollection);
+  const existingTeamNames = teamsSnapshot.docs.map(doc => doc.data().name);
   
-  teams.forEach(team => {
+  const batch = writeBatch(db);
+  const newTeamRefs: { team: Team, ref: string }[] = [];
+  
+  // Proses tim
+  for (const team of teams) {
     // Pastikan semua field memiliki nilai yang valid
     if (!team.name) {
       console.warn(`Skipping team with id ${team.id} because name is undefined`);
-      return; // Skip tim ini
+      continue; // Skip tim ini
+    }
+    
+    // Cek apakah tim dengan nama yang sama sudah ada
+    if (existingTeamNames.includes(team.name)) {
+      console.warn(`Team with name "${team.name}" already exists in Firestore. Skipping to prevent duplication.`);
+      continue; // Skip tim ini untuk mencegah duplikasi
     }
     
     const teamRef = doc(collection(db, COLLECTIONS.TEAMS));
@@ -224,9 +237,42 @@ export const initializeTeamsToFirestore = async (teams: Team[]): Promise<void> =
       group: team.group || '',
       logo: team.logo || null
     });
-  });
+    
+    // Simpan referensi tim baru untuk digunakan saat menyimpan pemain
+    newTeamRefs.push({ team, ref: teamRef.id });
+  }
   
+  // Commit batch untuk tim
   await batch.commit();
+  
+  // Proses pemain dalam batch terpisah
+  if (newTeamRefs.length > 0) {
+    const playersBatch = writeBatch(db);
+    
+    for (const { team, ref } of newTeamRefs) {
+      // Simpan pemain untuk tim ini
+      if (team.players && team.players.length > 0) {
+        for (const player of team.players) {
+          if (!player.name) {
+            console.warn(`Skipping player because name is undefined`);
+            continue;
+          }
+          
+          const playerRef = doc(collection(db, COLLECTIONS.PLAYERS));
+          playersBatch.set(playerRef, {
+            name: player.name || '',
+            number: player.number || 0,
+            position: player.position || '',
+            teamId: ref, // Gunakan ID tim baru
+            photo: player.photo || null
+          });
+        }
+      }
+    }
+    
+    // Commit batch untuk pemain
+    await playersBatch.commit();
+  }
 };
 
 export const initializePlayersToFirestore = async (players: Player[]): Promise<void> => {
@@ -299,4 +345,6 @@ export const clearTeamsFromFirestore = async (): Promise<void> => {
   
   // Commit the batch
   await batch.commit();
+  
+  console.log(`Deleted ${teamsSnapshot.docs.length} teams and ${playersSnapshot.docs.length} players from Firestore`);
 };

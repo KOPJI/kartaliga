@@ -1,12 +1,16 @@
 import React, { useState } from 'react';
 import { useTournament } from '../context/TournamentContext';
-import { initializeTeamsToFirestore, initializePlayersToFirestore, fetchTeams, fetchMatches, clearTeamsFromFirestore } from '../firebase/firestore';
+import { 
+  fetchTeams as fetchTeamsFromFirestore, 
+  initializeTeamsToFirestore, 
+  fetchMatches, 
+  clearTeamsFromFirestore 
+} from '../firebase/firestore';
 import { CircleAlert, Check, Loader, ChartBar } from 'lucide-react';
 
 const DataInitialization = () => {
   const { teams, setTeams } = useTournament();
   const [initializing, setInitializing] = useState(false);
-  const [initializingPlayers, setInitializingPlayers] = useState(false);
   const [fetching, setFetching] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
@@ -18,6 +22,16 @@ const DataInitialization = () => {
     setError(null);
     
     try {
+      // Cek apakah sudah ada data tim di Firestore untuk mencegah duplikasi
+      const existingTeams = await fetchTeamsFromFirestore();
+      
+      if (existingTeams.length > 0) {
+        if (!window.confirm(`Sudah ada ${existingTeams.length} tim di Firestore. Apakah Anda ingin melanjutkan dan menambahkan tim baru? Ini mungkin menyebabkan duplikasi data.`)) {
+          setInitializing(false);
+          return;
+        }
+      }
+      
       // Validasi data tim sebelum mengirimkannya ke Firestore
       const validTeams = teams.filter(team => {
         if (!team.name || !team.group) {
@@ -31,44 +45,21 @@ const DataInitialization = () => {
         throw new Error('Tidak ada data tim yang valid untuk diinisialisasi');
       }
       
+      // Modifikasi fungsi initializeTeamsToFirestore untuk menyimpan pemain juga
       await initializeTeamsToFirestore(validTeams);
-      setSuccess(`${validTeams.length} data tim berhasil diinisialisasi ke Firestore`);
+      
+      // Inisialisasi pemain secara otomatis
+      const allPlayers = validTeams.flatMap(team => team.players.map(player => ({
+        ...player,
+        teamId: team.id
+      })));
+      
+      setSuccess(`${validTeams.length} data tim dan ${allPlayers.length} data pemain berhasil diinisialisasi ke Firestore`);
     } catch (err) {
       console.error('Error initializing teams:', err);
       setError('Gagal menginisialisasi data tim. Silakan coba lagi.');
     } finally {
       setInitializing(false);
-    }
-  };
-
-  const handleInitializePlayers = async () => {
-    setInitializingPlayers(true);
-    setSuccess(null);
-    setError(null);
-    
-    try {
-      const allPlayers = teams.flatMap(team => team.players);
-      
-      // Validasi data pemain sebelum mengirimkannya ke Firestore
-      const validPlayers = allPlayers.filter(player => {
-        if (!player.name || !player.teamId) {
-          console.warn(`Skipping invalid player: ${JSON.stringify(player)}`);
-          return false;
-        }
-        return true;
-      });
-      
-      if (validPlayers.length === 0) {
-        throw new Error('Tidak ada data pemain yang valid untuk diinisialisasi');
-      }
-      
-      await initializePlayersToFirestore(validPlayers);
-      setSuccess(`${validPlayers.length} data pemain berhasil diinisialisasi ke Firestore`);
-    } catch (err) {
-      console.error('Error initializing players:', err);
-      setError('Gagal menginisialisasi data pemain. Silakan coba lagi.');
-    } finally {
-      setInitializingPlayers(false);
     }
   };
 
@@ -92,7 +83,7 @@ const DataInitialization = () => {
   };
 
   const handleClearTeams = async () => {
-    if (!window.confirm('PERINGATAN: Anda akan menghapus SEMUA data tim dari Firestore. Tindakan ini tidak dapat dibatalkan. Lanjutkan?')) {
+    if (!window.confirm('PERINGATAN: Anda akan menghapus SEMUA data tim dan pemain dari Firestore. Tindakan ini tidak dapat dibatalkan dan hanya menghapus data di Firestore, bukan di aplikasi ini. Lanjutkan?')) {
       return;
     }
     
@@ -102,8 +93,7 @@ const DataInitialization = () => {
     
     try {
       await clearTeamsFromFirestore();
-      setTeams([]);
-      setSuccess('Semua data tim berhasil dihapus dari Firestore');
+      setSuccess('Semua data tim dan pemain berhasil dihapus dari Firestore (data di aplikasi ini tidak berubah)');
     } catch (err) {
       console.error('Error clearing teams:', err);
       setError('Gagal menghapus data tim. Silakan coba lagi.');
@@ -161,22 +151,7 @@ const DataInitialization = () => {
               Menginisialisasi...
             </>
           ) : (
-            'Inisialisasi Data Tim'
-          )}
-        </button>
-        
-        <button
-          onClick={handleInitializePlayers}
-          disabled={initializingPlayers}
-          className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:bg-green-300 flex items-center justify-center"
-        >
-          {initializingPlayers ? (
-            <>
-              <Loader className="h-5 w-5 mr-2 animate-spin" />
-              Menginisialisasi...
-            </>
-          ) : (
-            'Inisialisasi Data Pemain'
+            'Inisialisasi Data Tim & Pemain'
           )}
         </button>
         
@@ -206,7 +181,7 @@ const DataInitialization = () => {
               Menghapus...
             </>
           ) : (
-            'Kosongkan Total Tim'
+            'Kosongkan Data di Firestore'
           )}
         </button>
       </div>
