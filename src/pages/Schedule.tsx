@@ -99,45 +99,59 @@ const Schedule = () => {
 
   const handleGenerateSchedule = async () => {
     try {
+      // Reset state
       setIsGenerating(true);
       setError(null);
       setSuccess(null);
       setLoadingProgress(0);
       setLoadingMessage('Mempersiapkan pembuatan jadwal...');
       
+      // Validasi tanggal
       if (!startDate) {
         throw new Error('Silakan pilih tanggal mulai turnamen');
       }
 
-      // Mulai interval untuk update progress
-      const progressInterval = setInterval(updateLoadingProgress, 800);
+      // Mulai interval untuk update progress dengan interval lebih cepat
+      const progressInterval = setInterval(() => {
+        setLoadingProgress(prev => {
+          if (prev >= 90) return prev;
+          // Tingkatkan progress lebih cepat
+          return prev + 2;
+        });
+        
+        const messages = [
+          'Mempersiapkan pembuatan jadwal...',
+          'Mengatur grup dan tim...',
+          'Menghitung jarak antar pertandingan...',
+          'Menyusun jadwal pertandingan...',
+          'Memvalidasi jadwal...',
+          'Menyimpan jadwal ke database...'
+        ];
+        
+        setLoadingMessage(messages[Math.floor(loadingProgress / 20)] || messages[messages.length - 1]);
+      }, 300); // Update setiap 300ms
       
-      // Tambahkan timeout untuk mencegah operasi yang terlalu lama
-      const timeoutPromise = new Promise((_, reject) => {
+      try {
+        // Jalankan pembuatan jadwal
+        await generateSchedule(startDate);
+        
+        // Jika berhasil, update progress ke 100%
+        clearInterval(progressInterval);
+        setLoadingProgress(100);
+        setLoadingMessage('Jadwal berhasil dibuat!');
+        
+        // Tambahkan delay sebelum menutup modal
         setTimeout(() => {
-          reject(new Error('Waktu pembuatan jadwal habis. Silakan coba lagi dengan tanggal yang berbeda.'));
-        }, 20000); // 20 detik timeout
-      });
-      
-      // Race antara operasi asli dan timeout
-      await Promise.race([
-        generateSchedule(startDate),
-        timeoutPromise
-      ]);
-      
-      clearInterval(progressInterval);
-      setLoadingProgress(100);
-      setLoadingMessage('Jadwal berhasil dibuat!');
-      
-      // Tambahkan delay sebelum menutup modal
-      setTimeout(() => {
-        setSuccess('Jadwal berhasil dibuat!');
-        setShowModal(false);
-        setIsGenerating(false);
-        setLoadingProgress(0);
-        setLoadingMessage('Mempersiapkan pembuatan jadwal...');
-      }, 1000);
-      
+          setSuccess('Jadwal berhasil dibuat!');
+          setShowModal(false);
+          setIsGenerating(false);
+          setLoadingProgress(0);
+          setLoadingMessage('Mempersiapkan pembuatan jadwal...');
+        }, 1000);
+      } catch (error: any) {
+        clearInterval(progressInterval);
+        throw error;
+      }
     } catch (err: any) {
       console.error('Error saat membuat jadwal:', err);
       setError(err.message || 'Terjadi kesalahan saat membuat jadwal');

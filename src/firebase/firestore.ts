@@ -14,6 +14,21 @@ import {
 } from 'firebase/firestore';
 import { Team, Player, Match, Goal, Card } from '../context/TournamentContext';
 
+// Export fungsi-fungsi Firestore yang diperlukan
+export {
+  collection,
+  doc,
+  getDocs,
+  getDoc,
+  setDoc,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  query,
+  where,
+  writeBatch
+};
+
 // Collections
 const COLLECTIONS = {
   TEAMS: 'teams',
