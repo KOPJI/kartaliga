@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTournament, Team } from '../context/TournamentContext';
-import { Pencil, Plus, Search, UserPlus, Users, X, Trash2, Loader, Check, CircleAlert, SortAsc, SortDesc } from 'lucide-react';
+import { Pencil, Plus, Search, UserPlus, Users, X, Trash2, Loader, Check, CircleAlert } from 'lucide-react';
 
 // Data tim per grup
 const INITIAL_TEAMS = {
