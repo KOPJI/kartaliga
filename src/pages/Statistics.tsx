@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useTournament } from '../context/TournamentContext';
 import { Award, ChartBar, ChevronRight, Filter, TrendingUp, Trophy, UserCheck } from 'lucide-react';
+import { formatDateIndonesia } from '../utils/dateUtils';
 
 const Statistics = () => {
   const { teams, matches, topScorers } = useTournament();
@@ -48,6 +49,11 @@ const Statistics = () => {
     avgGoalsPerMatch: completedMatches.length > 0 
       ? (totalGoals / completedMatches.length).toFixed(2) 
       : '0.00'
+  };
+
+  // Format tanggal untuk tampilan
+  const formatDate = (dateString: string) => {
+    return formatDateIndonesia(dateString);
   };
 
   return (
@@ -268,7 +274,7 @@ const Statistics = () => {
                           Grup {match.group}
                         </span>
                         {match.date && (
-                          <span className="text-gray-500 text-sm">{match.date}</span>
+                          <span className="text-gray-500 text-sm">{formatDate(match.date)}</span>
                         )}
                       </div>
                     </div>

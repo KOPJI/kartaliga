@@ -1,6 +1,7 @@
 import React from 'react';
 import { Team, Match } from '../context/TournamentContext';
 import { Calendar, Clock } from 'lucide-react';
+import { formatDateIndonesia } from '../utils/dateUtils';
 
 interface TeamStatsProps {
   team: Team;

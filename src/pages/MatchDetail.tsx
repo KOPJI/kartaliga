@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useTournament, Player, Card as CardType } from '../context/TournamentContext';
 import { Squircle, ArrowLeft, Calendar, Clock, MapPin, Pencil, Plus, Save, UserPlus, X } from 'lucide-react';
+import { formatDateIndonesiaFull } from '../utils/dateUtils';
 
 const MatchDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -203,6 +204,11 @@ const MatchDetail = () => {
     ));
   };
 
+  // Format tanggal
+  const formatDate = (dateString: string) => {
+    return formatDateIndonesiaFull(dateString);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2">
@@ -284,7 +290,7 @@ const MatchDetail = () => {
           {match.date && (
             <div className="flex items-center">
               <Calendar className="h-4 w-4 mr-1" />
-              {match.date}
+              {formatDate(match.date)}
             </div>
           )}
           

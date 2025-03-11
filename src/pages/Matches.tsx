@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTournament } from '../context/TournamentContext';
 import { Calendar, ChevronRight, Search, Filter, Check, Clock, X } from 'lucide-react';
+import { formatDateIndonesiaFull } from '../utils/dateUtils';
 
 const Matches = () => {
   const { teams, matches } = useTournament();
@@ -64,13 +65,7 @@ const Matches = () => {
 
   // Format tanggal
   const formatDate = (dateString: string) => {
-    const options: Intl.DateTimeFormatOptions = { 
-      weekday: 'long', 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
-    };
-    return new Date(dateString).toLocaleDateString('id-ID', options);
+    return formatDateIndonesiaFull(dateString);
   };
 
   return (

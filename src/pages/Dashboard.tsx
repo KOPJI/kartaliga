@@ -1,6 +1,8 @@
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useTournament } from '../context/TournamentContext';
 import { Calendar, ChartBar, ListOrdered, Loader, Squircle, Trophy, Users, User, Check, Shield, Plus } from 'lucide-react';
+import { formatDateIndonesia } from '../utils/dateUtils';
 
 const Dashboard = () => {
   const { teams, matches, standings, topScorers, loading } = useTournament();
@@ -34,6 +36,11 @@ const Dashboard = () => {
     .filter(team => team.players && team.players.length > 0)
     .sort((a, b) => b.players.length - a.players.length)
     .slice(0, 4);
+
+  // Format tanggal untuk tampilan
+  const formatDate = (dateString: string) => {
+    return formatDateIndonesia(dateString);
+  };
 
   if (loading) {
     return (
@@ -153,7 +160,7 @@ const Dashboard = () => {
                 return (
                   <div key={match.id} className="p-4 hover:bg-gray-50">
                     <div className="text-sm text-gray-500 mb-2">
-                      Grup {match.group} · {match.date || 'Belum dijadwalkan'}
+                      Grup {match.group} · {match.date ? formatDate(match.date) : 'Belum dijadwalkan'}
                     </div>
                     <div className="flex justify-between items-center">
                       <div className="font-medium">{homeTeam?.name || 'Tim tidak ditemukan'}</div>

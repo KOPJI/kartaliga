@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTournament } from '../context/TournamentContext';
 import { Calendar, Trash2, Loader, Clock, MapPin, Users, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { formatDateIndonesiaFull, formatDateIndonesia, convertToISODate, getTodayIndonesiaFormat } from '../utils/dateUtils';
 
 const Schedule = () => {
   const { matches, generateSchedule, clearSchedule, teams, loading } = useTournament();
@@ -10,6 +11,7 @@ const Schedule = () => {
   const [success, setSuccess] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [startDate, setStartDate] = useState<string>('');
+  const [startDateDisplay, setStartDateDisplay] = useState<string>('');
 
   // Mengelompokkan pertandingan berdasarkan tanggal
   const matchesByDate = matches.reduce((acc, match) => {
@@ -31,10 +33,20 @@ const Schedule = () => {
     const today = new Date();
     const formattedDate = today.toISOString().split('T')[0];
     setStartDate(formattedDate);
+    setStartDateDisplay(getTodayIndonesiaFormat());
   };
 
   const handleCloseModal = () => {
     setShowModal(false);
+  };
+
+  const handleDateChange = (e: any) => {
+    const indonesiaDate = e.target.value;
+    setStartDateDisplay(indonesiaDate);
+    
+    // Konversi ke format ISO untuk backend
+    const isoDate = convertToISODate(indonesiaDate);
+    setStartDate(isoDate);
   };
 
   const handleGenerateSchedule = async () => {
@@ -77,13 +89,7 @@ const Schedule = () => {
   };
 
   const formatDate = (dateString: string) => {
-    const options: Intl.DateTimeFormatOptions = { 
-      weekday: 'long', 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
-    };
-    return new Date(dateString).toLocaleDateString('id-ID', options);
+    return formatDateIndonesiaFull(dateString);
   };
 
   return (
@@ -201,12 +207,13 @@ const Schedule = () => {
             
             <div className="mb-6">
               <label className="block text-gray-700 text-sm font-medium mb-2">
-                Tanggal Mulai
+                Tanggal Mulai (DD/MM/YYYY)
               </label>
               <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
+                type="text"
+                placeholder="DD/MM/YYYY"
+                value={startDateDisplay}
+                onChange={handleDateChange}
                 className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <p className="text-sm text-gray-500 mt-2">
