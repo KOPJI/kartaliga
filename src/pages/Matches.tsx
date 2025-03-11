@@ -1,13 +1,36 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTournament } from '../context/TournamentContext';
-import { Calendar, ChevronRight, Filter, Search, Shield, Squircle, X } from 'lucide-react';
+import { Calendar, ChevronRight, Search, Filter, Check, Clock, X } from 'lucide-react';
 
 const Matches = () => {
   const { teams, matches } = useTournament();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterGroup, setFilterGroup] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<'all' | 'completed' | 'scheduled'>('all');
+
+  // Statistik pertandingan
+  const totalMatches = matches.length;
+  const completedMatches = matches.filter(match => match.status === 'completed').length;
+  const scheduledMatches = matches.filter(match => match.status === 'scheduled').length;
+  const cancelledMatches = matches.filter(match => match.status === 'cancelled').length;
+  
+  // Statistik grup
+  const matchesByGroup = matches.reduce((acc, match) => {
+    acc[match.group] = (acc[match.group] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+  
+  // Statistik gol
+  const totalGoals = matches.reduce((sum, match) => sum + (match.goals?.length || 0), 0);
+  const averageGoalsPerMatch = totalMatches > 0 ? (totalGoals / completedMatches).toFixed(1) : '0';
+  
+  // Statistik kartu
+  const totalCards = matches.reduce((sum, match) => sum + (match.cards?.length || 0), 0);
+  const yellowCards = matches.reduce((sum, match) => 
+    sum + match.cards.filter(card => card.type === 'yellow').length, 0);
+  const redCards = matches.reduce((sum, match) => 
+    sum + match.cards.filter(card => card.type === 'red').length, 0);
 
   // Filter matches based on criteria
   const filteredMatches = matches.filter(match => {
@@ -30,216 +53,223 @@ const Matches = () => {
     return matchesSearch && matchesGroup && matchesStatus;
   });
 
+  // Mendapatkan semua grup yang unik
+  const uniqueGroups = Array.from(new Set(matches.map(match => match.group))).sort();
+
+  // Mendapatkan nama tim
+  const getTeamName = (teamId: string) => {
+    const team = teams.find(team => team.id === teamId);
+    return team ? team.name : 'Tim tidak ditemukan';
+  };
+
+  // Format tanggal
+  const formatDate = (dateString: string) => {
+    const options: Intl.DateTimeFormatOptions = { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    };
+    return new Date(dateString).toLocaleDateString('id-ID', options);
+  };
+
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-green-800 flex items-center">
-            <Squircle className="w-8 h-8 mr-2" />
-            Pertandingan
-          </h1>
-          <p className="text-gray-600">Lihat dan kelola hasil pertandingan turnamen</p>
+    <div className="container mx-auto px-4 py-8">
+      <h1 className="text-2xl font-bold mb-6">Pertandingan</h1>
+      
+      {/* Statistik Pertandingan */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="bg-white p-4 rounded-lg shadow">
+          <div className="flex items-center mb-2">
+            <Calendar className="w-5 h-5 text-blue-600 mr-2" />
+            <h3 className="font-medium">Total Pertandingan</h3>
+          </div>
+          <p className="text-2xl font-bold">{totalMatches}</p>
+        </div>
+        
+        <div className="bg-white p-4 rounded-lg shadow">
+          <div className="flex items-center mb-2">
+            <Check className="w-5 h-5 text-green-600 mr-2" />
+            <h3 className="font-medium">Pertandingan Selesai</h3>
+          </div>
+          <p className="text-2xl font-bold">{completedMatches}</p>
+          <p className="text-sm text-gray-500">
+            {totalMatches > 0 ? `${Math.round((completedMatches / totalMatches) * 100)}%` : '0%'} dari total
+          </p>
+        </div>
+        
+        <div className="bg-white p-4 rounded-lg shadow">
+          <div className="flex items-center mb-2">
+            <Clock className="w-5 h-5 text-orange-600 mr-2" />
+            <h3 className="font-medium">Pertandingan Dijadwalkan</h3>
+          </div>
+          <p className="text-2xl font-bold">{scheduledMatches}</p>
+        </div>
+        
+        <div className="bg-white p-4 rounded-lg shadow">
+          <div className="flex items-center mb-2">
+            <X className="w-5 h-5 text-red-600 mr-2" />
+            <h3 className="font-medium">Pertandingan Dibatalkan</h3>
+          </div>
+          <p className="text-2xl font-bold">{cancelledMatches}</p>
         </div>
       </div>
       
-      {/* Filters */}
-      <div className="bg-white p-4 rounded-lg shadow border border-gray-200">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="relative flex-1">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search className="h-5 w-5 text-gray-400" />
+      {/* Statistik Tambahan */}
+      <div className="bg-white p-6 rounded-lg shadow mb-8">
+        <h2 className="text-lg font-semibold mb-4">Statistik Pertandingan</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div>
+            <h3 className="text-sm font-medium text-gray-500 mb-2">Gol</h3>
+            <div className="flex items-baseline">
+              <span className="text-2xl font-bold mr-2">{totalGoals}</span>
+              <span className="text-sm text-gray-500">Total Gol</span>
             </div>
-            <input
-              type="text"
-              placeholder="Cari tim..."
-              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-            {searchTerm && (
-              <button 
-                onClick={() => setSearchTerm('')}
-                className="absolute inset-y-0 right-0 pr-3 flex items-center"
-              >
-                <X className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-              </button>
-            )}
+            <p className="text-sm mt-1">Rata-rata {averageGoalsPerMatch} gol per pertandingan</p>
           </div>
           
-          <div className="flex flex-wrap gap-2">
-            <div className="flex border border-gray-300 rounded-md overflow-hidden">
-              <button
-                onClick={() => setFilterStatus('all')}
-                className={`px-3 py-2 ${
-                  filterStatus === 'all'
-                    ? 'bg-green-600 text-white'
-                    : 'bg-white text-gray-700 hover:bg-gray-100'
-                }`}
-              >
-                Semua
-              </button>
-              <button
-                onClick={() => setFilterStatus('completed')}
-                className={`px-3 py-2 ${
-                  filterStatus === 'completed'
-                    ? 'bg-green-600 text-white'
-                    : 'bg-white text-gray-700 hover:bg-gray-100'
-                }`}
-              >
-                Selesai
-              </button>
-              <button
-                onClick={() => setFilterStatus('scheduled')}
-                className={`px-3 py-2 ${
-                  filterStatus === 'scheduled'
-                    ? 'bg-green-600 text-white'
-                    : 'bg-white text-gray-700 hover:bg-gray-100'
-                }`}
-              >
-                Dijadwalkan
-              </button>
+          <div>
+            <h3 className="text-sm font-medium text-gray-500 mb-2">Kartu</h3>
+            <div className="flex items-baseline">
+              <span className="text-2xl font-bold mr-2">{totalCards}</span>
+              <span className="text-sm text-gray-500">Total Kartu</span>
             </div>
-            
-            <select
-              value={filterGroup || ''}
-              onChange={(e) => setFilterGroup(e.target.value || null)}
-              className="border border-gray-300 rounded-md px-3 py-2"
-            >
-              <option value="">Semua Grup</option>
-              <option value="A">Grup A</option>
-              <option value="B">Grup B</option>
-              <option value="C">Grup C</option>
-              <option value="D">Grup D</option>
-            </select>
+            <div className="flex mt-1">
+              <span className="text-sm mr-3">
+                <span className="inline-block w-3 h-3 bg-yellow-400 mr-1"></span> {yellowCards}
+              </span>
+              <span className="text-sm">
+                <span className="inline-block w-3 h-3 bg-red-600 mr-1"></span> {redCards}
+              </span>
+            </div>
+          </div>
+          
+          <div>
+            <h3 className="text-sm font-medium text-gray-500 mb-2">Pertandingan per Grup</h3>
+            <div className="space-y-1">
+              {Object.entries(matchesByGroup).sort(([a], [b]) => a.localeCompare(b)).map(([group, count]) => (
+                <div key={group} className="flex justify-between">
+                  <span className="text-sm">Grup {group}</span>
+                  <span className="text-sm font-medium">{count}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
       
-      {/* Matches list */}
-      {filteredMatches.length > 0 ? (
-        <div className="bg-white border border-gray-200 rounded-lg shadow overflow-hidden">
-          <div className="divide-y divide-gray-200">
-            {filteredMatches.map(match => {
-              const homeTeam = teams.find(t => t.id === match.homeTeamId);
-              const awayTeam = teams.find(t => t.id === match.awayTeamId);
-              const isCompleted = match.status === 'completed';
+      {/* Filter dan Pencarian */}
+      <div className="bg-white p-4 rounded-lg shadow mb-6">
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex-1">
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Cari pertandingan..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <Search className="absolute left-3 top-2.5 w-5 h-5 text-gray-400" />
+            </div>
+          </div>
+          
+          <div className="flex gap-4">
+            <div>
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value as any)}
+                className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="all">Semua Status</option>
+                <option value="scheduled">Dijadwalkan</option>
+                <option value="completed">Selesai</option>
+                <option value="cancelled">Dibatalkan</option>
+              </select>
+            </div>
+            
+            <div>
+              <select
+                value={filterGroup || ''}
+                onChange={(e) => setFilterGroup(e.target.value || null)}
+                className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Semua Grup</option>
+                {uniqueGroups.map(group => (
+                  <option key={group} value={group}>Grup {group}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Daftar Pertandingan */}
+      <div className="space-y-4">
+        {filteredMatches.length === 0 ? (
+          <div className="bg-white p-8 rounded-lg shadow text-center">
+            <p className="text-gray-500">Tidak ada pertandingan yang ditemukan</p>
+          </div>
+        ) : (
+          filteredMatches.map(match => (
+            <div key={match.id} className="bg-white rounded-lg shadow overflow-hidden">
+              <div className="p-4 border-b">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center">
+                    <Calendar className="w-4 h-4 text-gray-500 mr-2" />
+                    <span className="text-sm text-gray-600">{formatDate(match.date)}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <span className={`text-xs px-2 py-1 rounded-full ${
+                      match.status === 'completed' ? 'bg-green-100 text-green-800' :
+                      match.status === 'scheduled' ? 'bg-blue-100 text-blue-800' :
+                      'bg-red-100 text-red-800'
+                    }`}>
+                      {match.status === 'completed' ? 'Selesai' :
+                       match.status === 'scheduled' ? 'Dijadwalkan' :
+                       'Dibatalkan'}
+                    </span>
+                  </div>
+                </div>
+              </div>
               
-              return (
-                <Link 
-                  key={match.id}
-                  to={`/matches/${match.id}`}
-                  className="block p-4 hover:bg-gray-50 transition-colors"
-                >
-                  <div className="flex justify-between items-center mb-2">
-                    <div className="flex items-center gap-2">
-                      <span className="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded">
-                        Grup {match.group}
-                      </span>
-                      <span className="text-xs text-gray-500">
-                        Ronde {match.round}
-                      </span>
-                      {isCompleted ? (
-                        <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded">
-                          Selesai
-                        </span>
-                      ) : (
-                        <span className="bg-amber-100 text-amber-800 text-xs font-medium px-2.5 py-0.5 rounded">
-                          Dijadwalkan
-                        </span>
-                      )}
-                    </div>
-                    
-                    {match.date && (
-                      <div className="text-sm text-gray-500 flex items-center">
-                        <Calendar className="h-4 w-4 mr-1" />
-                        {match.date}
-                        {match.time && ` · ${match.time}`}
-                      </div>
+              <div className="p-6">
+                <div className="flex flex-col md:flex-row items-center justify-between">
+                  <div className="flex-1 text-center md:text-right mb-4 md:mb-0">
+                    <h3 className="font-semibold text-lg">{getTeamName(match.homeTeamId)}</h3>
+                    {match.status === 'completed' && (
+                      <span className="text-3xl font-bold">{match.homeScore}</span>
                     )}
                   </div>
                   
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="font-medium">{homeTeam?.name || 'Tim tidak ditemukan'}</div>
-                      {match.homeScore !== undefined && (
-                        <div className="text-sm text-gray-500">
-                          {match.goals.filter(g => g.teamId === match.homeTeamId).length} gol
-                        </div>
-                      )}
+                  <div className="mx-8 text-center">
+                    <div className="text-xs text-gray-500 mb-2">
+                      {match.time} • Grup {match.group}
                     </div>
-                    
-                    <div className="px-4">
-                      {isCompleted ? (
-                        <div className="text-xl font-bold">
-                          {match.homeScore} - {match.awayScore}
-                        </div>
-                      ) : (
-                        <div className="px-3 py-1 rounded bg-gray-100 text-gray-800">
-                          VS
-                        </div>
-                      )}
-                    </div>
-                    
-                    <div className="flex-1 text-right">
-                      <div className="font-medium">{awayTeam?.name || 'Tim tidak ditemukan'}</div>
-                      {match.awayScore !== undefined && (
-                        <div className="text-sm text-gray-500">
-                          {match.goals.filter(g => g.teamId === match.awayTeamId).length} gol
-                        </div>
-                      )}
-                    </div>
-                    
-                    <ChevronRight className="h-5 w-5 text-gray-400 ml-2" />
+                    <div className="text-lg font-bold">VS</div>
                   </div>
                   
-                  {/* Cards summary */}
-                  {match.cards.length > 0 && (
-                    <div className="mt-3 flex gap-3">
-                      <div className="flex items-center text-sm">
-                        <div className="w-3 h-4 bg-yellow-400 rounded-sm mr-1"></div>
-                        <span className="text-gray-600">
-                          {match.cards.filter(c => c.type === 'yellow').length}
-                        </span>
-                      </div>
-                      <div className="flex items-center text-sm">
-                        <div className="w-3 h-4 bg-red-500 rounded-sm mr-1"></div>
-                        <span className="text-gray-600">
-                          {match.cards.filter(c => c.type === 'red').length}
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {match.venue && (
-                    <div className="mt-2 text-sm text-gray-500">
-                      {match.venue}
-                    </div>
-                  )}
+                  <div className="flex-1 text-center md:text-left">
+                    <h3 className="font-semibold text-lg">{getTeamName(match.awayTeamId)}</h3>
+                    {match.status === 'completed' && (
+                      <span className="text-3xl font-bold">{match.awayScore}</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-gray-50 px-6 py-3 flex justify-between items-center">
+                <div className="text-sm text-gray-600">
+                  {match.venue}
+                </div>
+                <Link to={`/matches/${match.id}`} className="text-blue-600 hover:text-blue-800 flex items-center text-sm">
+                  Detail <ChevronRight className="w-4 h-4 ml-1" />
                 </Link>
-              );
-            })}
-          </div>
-        </div>
-      ) : (
-        <div className="bg-white border border-gray-200 rounded-lg shadow p-8 text-center">
-          <Shield className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-700 mb-2">Tidak ada pertandingan ditemukan</h3>
-          <p className="text-gray-500 mb-4">
-            {searchTerm 
-              ? `Tidak ada pertandingan yang cocok dengan "${searchTerm}"`
-              : filterGroup || filterStatus !== 'all'
-              ? 'Tidak ada pertandingan yang sesuai dengan filter'
-              : 'Belum ada pertandingan yang dijadwalkan'}
-          </p>
-          <Link
-            to="/schedule"
-            className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
-          >
-            <Calendar className="w-5 h-5 mr-1" />
-            Lihat Jadwal
-          </Link>
-        </div>
-      )}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
     </div>
   );
 };
