@@ -17,14 +17,14 @@ function App() {
     <TournamentProvider>
       <Router>
         <Routes>
-          <Route path="/" element={<Layout />}>
+          <Route element={<Layout />}>
             <Route index element={<Dashboard />} />
-            <Route path="/teams" element={<Teams />} />
-            <Route path="/teams/:id" element={<TeamDetail />} />
-            <Route path="/matches" element={<Matches />} />
-            <Route path="/matches/:id" element={<MatchDetail />} />
-            <Route path="/standings" element={<Standings />} />
-            <Route path="/statistics" element={<Statistics />} />
+            <Route path="teams" element={<Teams />} />
+            <Route path="teams/:id" element={<TeamDetail />} />
+            <Route path="matches" element={<Matches />} />
+            <Route path="matches/:id" element={<MatchDetail />} />
+            <Route path="standings" element={<Standings />} />
+            <Route path="statistics" element={<Statistics />} />
           </Route>
         </Routes>
       </Router>
