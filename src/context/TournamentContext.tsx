@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { 
   fetchTeams, 
   fetchMatches, 
@@ -170,7 +170,7 @@ const TournamentContext = createContext<TournamentContextType>(initialContext);
 
 export const useTournament = () => useContext(TournamentContext);
 
-export const TournamentProvider = ({ children }: { children: ReactNode }) => {
+export const TournamentProvider = ({ children }: { children: any }) => {
   const [teams, setTeams] = useState<Team[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
   const [standings, setStandings] = useState<Record<string, Standing[]>>({});
