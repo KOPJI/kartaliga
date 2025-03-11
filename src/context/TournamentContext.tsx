@@ -22,6 +22,7 @@ export interface Player {
   number: number;
   position: string;
   teamId: string;
+  photo?: string;
 }
 
 export interface Team {

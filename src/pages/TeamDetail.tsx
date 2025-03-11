@@ -19,7 +19,11 @@ const TeamDetail = () => {
     name: '',
     number: 1,
     position: 'Penyerang',
+    photo: ''
   });
+  const [playerPhotoFile, setPlayerPhotoFile] = useState<File | null>(null);
+  const [uploadingPlayerPhoto, setUploadingPlayerPhoto] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (team) {
@@ -49,7 +53,7 @@ const TeamDetail = () => {
     }
   };
 
-  const handleAddPlayer = (e: any) => {
+  const handleAddPlayer = async (e: any) => {
     e.preventDefault();
     
     if (newPlayer.name.trim() === '') {
@@ -57,25 +61,80 @@ const TeamDetail = () => {
       return;
     }
     
-    addPlayer({
-      name: newPlayer.name,
-      number: newPlayer.number,
-      position: newPlayer.position,
-      teamId: team?.id || '',
-    });
+    setIsSubmitting(true);
     
-    setNewPlayer({
-      name: '',
-      number: 1,
-      position: 'Penyerang',
-    });
-    
-    setIsAddingPlayer(false);
+    try {
+      let photoBase64 = newPlayer.photo;
+      
+      // Jika ada file foto yang diunggah, proses terlebih dahulu
+      if (playerPhotoFile) {
+        photoBase64 = await handlePlayerPhotoUpload(playerPhotoFile);
+        if (!photoBase64) {
+          // Jika gagal memproses foto, lanjutkan tanpa foto
+          console.warn('Gagal memproses foto pemain, melanjutkan tanpa foto');
+        }
+      }
+      
+      // Tambahkan pemain dengan foto yang sudah diproses
+      await addPlayer({
+        name: newPlayer.name,
+        number: newPlayer.number,
+        position: newPlayer.position,
+        teamId: team?.id || '',
+        photo: photoBase64
+      });
+      
+      // Reset form setelah berhasil
+      setNewPlayer({
+        name: '',
+        number: 1,
+        position: 'Penyerang',
+        photo: ''
+      });
+      setPlayerPhotoFile(null);
+      setIsAddingPlayer(false);
+    } catch (error) {
+      console.error('Error adding player:', error);
+      alert('Gagal menambahkan pemain. Silakan coba lagi.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleDeletePlayer = (playerId: string) => {
     if (window.confirm('Apakah Anda yakin ingin menghapus pemain ini?')) {
       deletePlayer(playerId);
+    }
+  };
+
+  const handlePlayerPhotoUpload = async (file: File): Promise<string | null> => {
+    if (!file) return null;
+    
+    setUploadingPlayerPhoto(true);
+    try {
+      // Konversi file gambar ke base64
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        
+        reader.onload = () => {
+          const base64Photo = reader.result as string;
+          setUploadingPlayerPhoto(false);
+          resolve(base64Photo);
+        };
+        
+        reader.onerror = (error) => {
+          console.error('Error converting player photo to base64:', error);
+          alert('Gagal memproses foto pemain. Silakan coba lagi.');
+          setUploadingPlayerPhoto(false);
+          reject(null);
+        };
+      });
+    } catch (error) {
+      console.error('Error handling player photo:', error);
+      alert('Gagal memproses foto pemain. Silakan coba lagi.');
+      setUploadingPlayerPhoto(false);
+      return null;
     }
   };
 
@@ -203,9 +262,19 @@ const TeamDetail = () => {
                 className="p-4 flex justify-between items-center hover:bg-gray-50"
               >
                 <div className="flex items-center">
-                  <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-800 font-bold">
-                    {player.number}
-                  </div>
+                  {player.photo ? (
+                    <div className="w-10 h-10 rounded-full overflow-hidden">
+                      <img 
+                        src={player.photo} 
+                        alt={player.name} 
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-800 font-bold">
+                      {player.number}
+                    </div>
+                  )}
                   <div className="ml-4">
                     <div className="font-medium">{player.name}</div>
                     <div className="text-sm text-gray-500">{player.position}</div>

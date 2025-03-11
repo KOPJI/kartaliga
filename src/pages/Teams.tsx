@@ -17,8 +17,11 @@ const Teams = () => {
   const [newPlayer, setNewPlayer] = useState({
     name: '',
     number: 1,
-    position: 'Penyerang'
+    position: 'Penyerang',
+    photo: ''
   });
+  const [playerPhotoFile, setPlayerPhotoFile] = useState<File | null>(null);
+  const [uploadingPlayerPhoto, setUploadingPlayerPhoto] = useState(false);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [teamToDelete, setTeamToDelete] = useState<Team | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -64,6 +67,37 @@ const Teams = () => {
       console.error('Error handling logo:', error);
       alert('Gagal memproses logo. Silakan coba lagi.');
       setUploadingLogo(false);
+      return null;
+    }
+  };
+
+  const handlePlayerPhotoUpload = async (file: File): Promise<string | null> => {
+    if (!file) return null;
+    
+    setUploadingPlayerPhoto(true);
+    try {
+      // Konversi file gambar ke base64
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        
+        reader.onload = () => {
+          const base64Photo = reader.result as string;
+          setUploadingPlayerPhoto(false);
+          resolve(base64Photo);
+        };
+        
+        reader.onerror = (error) => {
+          console.error('Error converting player photo to base64:', error);
+          alert('Gagal memproses foto pemain. Silakan coba lagi.');
+          setUploadingPlayerPhoto(false);
+          reject(null);
+        };
+      });
+    } catch (error) {
+      console.error('Error handling player photo:', error);
+      alert('Gagal memproses foto pemain. Silakan coba lagi.');
+      setUploadingPlayerPhoto(false);
       return null;
     }
   };
@@ -118,7 +152,7 @@ const Teams = () => {
     }
   };
 
-  const handleAddPlayer = (e: React.FormEvent) => {
+  const handleAddPlayer = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!selectedTeamId) return;
@@ -128,20 +162,49 @@ const Teams = () => {
       return;
     }
     
-    addPlayer({
-      name: newPlayer.name,
-      number: newPlayer.number,
-      position: newPlayer.position,
-      teamId: selectedTeamId
-    });
+    setIsSubmitting(true);
     
-    setNewPlayer({
-      name: '',
-      number: 1,
-      position: 'Penyerang'
-    });
-    setIsAddingPlayer(false);
-    setSelectedTeamId(null);
+    try {
+      let photoBase64 = newPlayer.photo;
+      
+      // Jika ada file foto yang diunggah, proses terlebih dahulu
+      if (playerPhotoFile) {
+        photoBase64 = await handlePlayerPhotoUpload(playerPhotoFile);
+        if (!photoBase64) {
+          // Jika gagal memproses foto, lanjutkan tanpa foto
+          console.warn('Gagal memproses foto pemain, melanjutkan tanpa foto');
+        }
+      }
+      
+      // Tambahkan pemain dengan foto yang sudah diproses
+      await addPlayer({
+        name: newPlayer.name,
+        number: newPlayer.number,
+        position: newPlayer.position,
+        teamId: selectedTeamId,
+        photo: photoBase64
+      });
+      
+      // Reset form setelah berhasil
+      setNewPlayer({
+        name: '',
+        number: 1,
+        position: 'Penyerang',
+        photo: ''
+      });
+      setPlayerPhotoFile(null);
+      setIsAddingPlayer(false);
+      setSelectedTeamId(null);
+      
+      // Tampilkan pesan sukses
+      setShowSuccessMessage(true);
+      setTimeout(() => setShowSuccessMessage(false), 3000);
+    } catch (error) {
+      console.error('Error adding player:', error);
+      alert('Gagal menambahkan pemain. Silakan coba lagi.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const openAddPlayerModal = (teamId: string, e: React.MouseEvent) => {
@@ -448,7 +511,7 @@ const Teams = () => {
                 />
               </div>
               
-              <div className="mb-6">
+              <div className="mb-4">
                 <label className="block text-gray-700 mb-2" htmlFor="player-position">
                   Posisi
                 </label>
@@ -465,6 +528,50 @@ const Teams = () => {
                 </select>
               </div>
               
+              <div className="mb-6">
+                <label className="block text-gray-700 mb-2" htmlFor="player-photo">
+                  Foto Pemain (Opsional)
+                </label>
+                <div className="flex gap-2">
+                  <div className="flex-1">
+                    <label className="w-full flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md cursor-pointer hover:bg-gray-50">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            setPlayerPhotoFile(file);
+                          }
+                        }}
+                      />
+                      <Plus className="h-5 w-5 mr-2" />
+                      {uploadingPlayerPhoto ? 'Mengunggah...' : 'Pilih Foto'}
+                    </label>
+                  </div>
+                  {(playerPhotoFile || newPlayer.photo) && (
+                    <div className="w-10 h-10 border border-gray-300 rounded-md flex items-center justify-center overflow-hidden">
+                      {playerPhotoFile ? (
+                        <img 
+                          src={URL.createObjectURL(playerPhotoFile)} 
+                          alt="Preview" 
+                          className="max-w-full max-h-full object-contain"
+                        />
+                      ) : (
+                        newPlayer.photo && (
+                          <img 
+                            src={newPlayer.photo} 
+                            alt="Preview" 
+                            className="max-w-full max-h-full object-contain" 
+                          />
+                        )
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+              
               <div className="flex justify-end gap-2">
                 <button
                   type="button"
@@ -473,14 +580,23 @@ const Teams = () => {
                     setSelectedTeamId(null);
                   }}
                   className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-100"
+                  disabled={isSubmitting}
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center"
+                  disabled={isSubmitting || uploadingPlayerPhoto}
                 >
-                  Simpan
+                  {isSubmitting || uploadingPlayerPhoto ? (
+                    <>
+                      <Loader className="h-5 w-5 mr-2 animate-spin" />
+                      {uploadingPlayerPhoto ? 'Mengunggah...' : 'Menyimpan...'}
+                    </>
+                  ) : (
+                    'Simpan'
+                  )}
                 </button>
               </div>
             </form>
