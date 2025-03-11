@@ -11,8 +11,7 @@ import {
   updateMatchInFirestore,
   addMatchToFirestore,
   addGoalToFirestore,
-  addCardToFirestore,
-  generateMatchScheduleInFirestore
+  addCardToFirestore
 } from '../firebase/firestore';
 
 // Types
@@ -322,57 +321,71 @@ export const TournamentProvider = ({ children }: { children: any }) => {
   // Match functions
   const generateSchedule = async () => {
     try {
-      // Group teams by group
-      const groupedTeams: Record<string, Team[]> = {};
-      teams.forEach(team => {
-        if (!groupedTeams[team.group]) {
-          groupedTeams[team.group] = [];
-        }
-        groupedTeams[team.group].push(team);
-      });
-
+      // Buat jadwal pertandingan untuk setiap grup
       const matchesToCreate: Omit<Match, 'id' | 'goals' | 'cards'>[] = [];
       
-      // Generate round-robin schedule for each group
-      Object.entries(groupedTeams).forEach(([group, groupTeams]) => {
-        // Round-robin algorithm
-        for (let round = 1; round <= groupTeams.length - 1; round++) {
-          for (let i = 0; i < groupTeams.length / 2; i++) {
-            const homeIndex = i;
-            const awayIndex = groupTeams.length - 1 - i;
-            
-            // Skip if there's odd number of teams and this is the bye
-            if (homeIndex !== awayIndex) {
-              const homeTeam = groupTeams[homeIndex];
-              const awayTeam = groupTeams[awayIndex];
-              
-              matchesToCreate.push({
-                homeTeamId: homeTeam.id,
-                awayTeamId: awayTeam.id,
-                date: '', // To be filled later
-                time: '', // To be filled later
-                venue: 'Lapangan Utama',
-                group,
-                round,
-                status: 'scheduled'
-              });
-            }
-          }
-          
-          // Rotate teams for next round (keep first team fixed)
-          groupTeams.splice(1, 0, groupTeams.pop()!);
+      // Kelompokkan tim berdasarkan grup
+      const teamsByGroup = teams.reduce((acc, team) => {
+        if (!acc[team.group]) {
+          acc[team.group] = [];
         }
-      });
+        acc[team.group].push(team);
+        return acc;
+      }, {} as Record<string, Team[]>);
       
-      // Create all matches in Firestore
-      await generateMatchScheduleInFirestore(matchesToCreate);
+      // Untuk setiap grup, buat jadwal pertandingan
+      for (const [group, groupTeams] of Object.entries(teamsByGroup)) {
+        // Buat pertandingan home dan away untuk setiap pasangan tim
+        for (let i = 0; i < groupTeams.length; i++) {
+          for (let j = i + 1; j < groupTeams.length; j++) {
+            // Pertandingan kandang
+            matchesToCreate.push({
+              homeTeamId: groupTeams[i].id,
+              awayTeamId: groupTeams[j].id,
+              date: '', // Akan diatur nanti
+              time: '', // Akan diatur nanti
+              venue: 'TBD',
+              group,
+              round: 1,
+              homeScore: 0,
+              awayScore: 0,
+              status: 'scheduled'
+            });
+            
+            // Pertandingan tandang
+            matchesToCreate.push({
+              homeTeamId: groupTeams[j].id,
+              awayTeamId: groupTeams[i].id,
+              date: '', // Akan diatur nanti
+              time: '', // Akan diatur nanti
+              venue: 'TBD',
+              group,
+              round: 2,
+              homeScore: 0,
+              awayScore: 0,
+              status: 'scheduled'
+            });
+          }
+        }
+      }
       
-      // Refresh matches from Firestore
-      const updatedMatches = await fetchMatches();
-      setMatches(updatedMatches);
+      // Tambahkan semua pertandingan ke Firestore
+      const newMatches: Match[] = [];
+      for (const match of matchesToCreate) {
+        const matchId = await addMatchToFirestore(match);
+        newMatches.push({
+          ...match,
+          id: matchId,
+          goals: [],
+          cards: []
+        });
+      }
+      
+      // Update state
+      setMatches(prev => [...prev, ...newMatches]);
       
     } catch (error) {
-      console.error("Error generating schedule:", error);
+      console.error('Error generating match schedule:', error);
       throw error;
     }
   };
