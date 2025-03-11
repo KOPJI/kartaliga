@@ -143,13 +143,13 @@ const TeamDetail = () => {
       }
       
       await updateTeam({
-        ...team,
-        name: teamData.name,
-        group: teamData.group,
+      ...team,
+      name: teamData.name,
+      group: teamData.group,
         logo: logoBase64
-      });
-      
-      setEditMode(false);
+    });
+    
+    setEditMode(false);
       setLogoFile(null);
     } catch (error) {
       console.error('Error updating team:', error);
@@ -438,15 +438,15 @@ const TeamDetail = () => {
                 <label className="block text-gray-700 font-medium mb-2">
                   Nama Tim
                 </label>
-                {editMode ? (
-                  <input
-                    type="text"
-                    value={teamData.name}
-                    onChange={(e) => setTeamData({ ...teamData, name: e.target.value })}
+            {editMode ? (
+              <input
+                type="text"
+                value={teamData.name}
+                onChange={(e) => setTeamData({ ...teamData, name: e.target.value })}
                     className="w-full border border-gray-300 rounded-md p-2 focus:ring-green-500 focus:border-green-500"
                     placeholder="Masukkan nama tim"
-                  />
-                ) : (
+              />
+            ) : (
                   <p className="text-gray-900">{teamData.name || 'Tidak ada nama'}</p>
                 )}
               </div>
@@ -456,19 +456,19 @@ const TeamDetail = () => {
                   Grup
                 </label>
                 {editMode ? (
-                  <select
-                    value={teamData.group}
-                    onChange={(e) => setTeamData({ ...teamData, group: e.target.value })}
+                <select
+                  value={teamData.group}
+                  onChange={(e) => setTeamData({ ...teamData, group: e.target.value })}
                     className="w-full border border-gray-300 rounded-md p-2 focus:ring-green-500 focus:border-green-500"
                   >
                     <option value="A">Grup A</option>
                     <option value="B">Grup B</option>
                     <option value="C">Grup C</option>
                     <option value="D">Grup D</option>
-                  </select>
-                ) : (
+                </select>
+              ) : (
                   <p className="text-gray-900">Grup {teamData.group || 'Tidak ada grup'}</p>
-                )}
+              )}
               </div>
             </div>
           </div>
@@ -477,13 +477,13 @@ const TeamDetail = () => {
       
       {/* Actions */}
       <div className="flex gap-3">
-        <button
-          onClick={() => setIsAddingPlayer(true)}
-          className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors flex items-center"
-        >
-          <UserPlus className="w-5 h-5 mr-1" />
-          Tambah Pemain
-        </button>
+            <button
+              onClick={() => setIsAddingPlayer(true)}
+              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors flex items-center"
+            >
+              <UserPlus className="w-5 h-5 mr-1" />
+              Tambah Pemain
+            </button>
       </div>
       
       {/* Players list */}
