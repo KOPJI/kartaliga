@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTournament, Team } from '../context/TournamentContext';
-import { Pencil, Plus, Search, UserPlus, Users, X } from 'lucide-react';
+import { Pencil, Plus, Search, UserPlus, Users, X, Trash2, Loader } from 'lucide-react';
 
 const Teams = () => {
   const navigate = useNavigate();
-  const { teams, addTeam, addPlayer } = useTournament();
+  const { teams, addTeam, addPlayer, deleteTeam } = useTournament();
   const [isAddingTeam, setIsAddingTeam] = useState(false);
   const [newTeam, setNewTeam] = useState({ name: '', group: 'A', logo: '' });
   const [searchTerm, setSearchTerm] = useState('');
@@ -17,6 +17,9 @@ const Teams = () => {
     number: 1,
     position: 'Penyerang'
   });
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+  const [teamToDelete, setTeamToDelete] = useState<Team | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleAddTeam = (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,15 +53,14 @@ const Teams = () => {
       name: newPlayer.name,
       number: newPlayer.number,
       position: newPlayer.position,
-      teamId: selectedTeamId,
+      teamId: selectedTeamId
     });
     
     setNewPlayer({
       name: '',
       number: 1,
-      position: 'Penyerang',
+      position: 'Penyerang'
     });
-    
     setIsAddingPlayer(false);
     setSelectedTeamId(null);
   };
@@ -69,17 +71,43 @@ const Teams = () => {
     setSelectedTeamId(teamId);
     setIsAddingPlayer(true);
   };
-  
-  const filteredTeams = teams
-    .filter(team => team.name && team.name.toLowerCase().includes(searchTerm.toLowerCase()))
-    .filter(team => filterGroup === null || team.group === filterGroup);
-  
-  const groupCounts: Record<string, number> = {};
-  teams.forEach(team => {
-    if (!groupCounts[team.group]) groupCounts[team.group] = 0;
-    groupCounts[team.group]++;
+
+  const openDeleteConfirmation = (team: Team, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setTeamToDelete(team);
+    setIsConfirmingDelete(true);
+  };
+
+  const handleDeleteTeam = async () => {
+    if (!teamToDelete) return;
+    
+    setIsDeleting(true);
+    try {
+      await deleteTeam(teamToDelete.id);
+      setIsConfirmingDelete(false);
+      setTeamToDelete(null);
+    } catch (error) {
+      console.error('Error deleting team:', error);
+      alert('Gagal menghapus tim. Silakan coba lagi.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  // Filter teams based on search term and group filter
+  const filteredTeams = teams.filter(team => {
+    const matchesSearch = team.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesGroup = filterGroup === null || team.group === filterGroup;
+    return matchesSearch && matchesGroup;
   });
-  
+
+  // Count teams per group
+  const groupCounts = teams.reduce((counts, team) => {
+    counts[team.group] = (counts[team.group] || 0) + 1;
+    return counts;
+  }, {} as Record<string, number>);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -324,72 +352,121 @@ const Teams = () => {
         </div>
       )}
       
+      {/* Delete confirmation modal */}
+      {isConfirmingDelete && teamToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold text-red-600">Konfirmasi Hapus Tim</h2>
+              <button onClick={() => {
+                setIsConfirmingDelete(false);
+                setTeamToDelete(null);
+              }}>
+                <X className="h-6 w-6 text-gray-500 hover:text-gray-700" />
+              </button>
+            </div>
+            
+            <div className="mb-6">
+              <p className="text-gray-700 mb-4">
+                Apakah Anda yakin ingin menghapus tim <strong>{teamToDelete.name}</strong>?
+              </p>
+              <p className="text-gray-700 mb-4">
+                Tindakan ini akan menghapus tim beserta {teamToDelete.players.length} pemain yang terdaftar. Data pertandingan yang terkait dengan tim ini juga akan terpengaruh.
+              </p>
+              <p className="text-red-600 font-medium">
+                Tindakan ini tidak dapat dibatalkan.
+              </p>
+            </div>
+            
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsConfirmingDelete(false);
+                  setTeamToDelete(null);
+                }}
+                className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-100"
+                disabled={isDeleting}
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteTeam}
+                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 flex items-center"
+                disabled={isDeleting}
+              >
+                {isDeleting ? (
+                  <>
+                    <Loader className="h-5 w-5 mr-2 animate-spin" />
+                    Menghapus...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="h-5 w-5 mr-2" />
+                    Hapus Tim
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* Team list */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredTeams.map((team) => (
-          <Link
+          <div
             key={team.id}
-            to={`/teams/${team.id}`}
-            className="bg-white border border-gray-200 rounded-lg shadow hover:shadow-md transition-shadow p-4"
+            className="bg-white border border-gray-200 rounded-lg shadow hover:shadow-md transition-shadow p-4 relative"
           >
-            <div className="flex justify-between items-start">
-              <div>
-                <div className="inline-block px-2 py-1 rounded-md bg-green-100 text-green-800 text-xs font-medium mb-2">
-                  Grup {team.group}
-                </div>
-                {team.logo && (
-                  <div className="w-10 h-10 mb-2 overflow-hidden">
-                    <img src={team.logo} alt={team.name} className="w-full h-full object-contain" />
+            <Link
+              to={`/teams/${team.id}`}
+              className="block"
+            >
+              <div className="flex justify-between items-start">
+                <div>
+                  <div className="inline-block px-2 py-1 rounded-md bg-green-100 text-green-800 text-xs font-medium mb-2">
+                    Grup {team.group}
                   </div>
-                )}
-                <h3 className="text-lg font-semibold">{team.name}</h3>
-                <div className="flex items-center mt-2 text-gray-500 text-sm">
-                  <Users className="h-4 w-4 mr-1" />
-                  <span>{team.players.length} Pemain</span>
-                </div>
-              </div>
-              
-              <div className="flex flex-col gap-2">
-                <span 
-                  className="p-2 bg-blue-50 text-blue-600 rounded-full hover:bg-blue-100 cursor-pointer"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    navigate(`/teams/${team.id}`);
-                  }}
-                >
-                  <Pencil className="h-4 w-4" />
-                </span>
-                <span 
-                  className="p-2 bg-green-50 text-green-600 rounded-full hover:bg-green-100 cursor-pointer"
-                  onClick={(e) => openAddPlayerModal(team.id, e)}
-                >
-                  <UserPlus className="h-4 w-4" />
-                </span>
-              </div>
-            </div>
-            
-            {team.players.length > 0 && (
-              <div className="mt-4">
-                <p className="text-sm font-medium text-gray-600 mb-2">Pemain:</p>
-                <div className="flex flex-wrap gap-1">
-                  {team.players.slice(0, 5).map((player) => (
-                    <span
-                      key={player.id}
-                      className="inline-block bg-gray-100 rounded-full px-2 py-1 text-xs"
-                    >
-                      {player.name} ({player.number})
-                    </span>
-                  ))}
-                  {team.players.length > 5 && (
-                    <span className="inline-block bg-gray-100 rounded-full px-2 py-1 text-xs">
-                      +{team.players.length - 5} lainnya
-                    </span>
+                  {team.logo && (
+                    <div className="w-10 h-10 mb-2 overflow-hidden">
+                      <img src={team.logo} alt={team.name} className="w-full h-full object-contain" />
+                    </div>
                   )}
+                  <h3 className="text-lg font-semibold">{team.name}</h3>
+                  <div className="flex items-center mt-2 text-gray-500 text-sm">
+                    <Users className="h-4 w-4 mr-1" />
+                    <span>{team.players.length} Pemain</span>
+                  </div>
                 </div>
               </div>
-            )}
-          </Link>
+            </Link>
+            
+            <div className="absolute top-4 right-4 flex space-x-2">
+              <button
+                onClick={(e) => openAddPlayerModal(team.id, e)}
+                className="p-1.5 bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200 transition-colors"
+                title="Tambah Pemain"
+              >
+                <UserPlus className="h-4 w-4" />
+              </button>
+              <Link
+                to={`/teams/${team.id}`}
+                className="p-1.5 bg-green-100 text-green-600 rounded-full hover:bg-green-200 transition-colors"
+                aria-label="Edit Tim"
+              >
+                <Pencil className="h-4 w-4" />
+              </Link>
+              <button
+                onClick={(e) => openDeleteConfirmation(team, e)}
+                className="p-1.5 bg-red-100 text-red-600 rounded-full hover:bg-red-200 transition-colors"
+                title="Hapus Tim"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
         ))}
       </div>
       
