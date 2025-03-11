@@ -3,6 +3,14 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useTournament, Team } from '../context/TournamentContext';
 import { Pencil, Plus, Search, UserPlus, Users, X, Trash2, Loader, Check, CircleAlert } from 'lucide-react';
 
+// Data tim per grup
+const INITIAL_TEAMS = {
+  'A': ['REMAJA PUTRA A', 'PALAPA A', 'TOXNET A', 'PERU FC B', 'LEMKA B', 'PORBA JAYA A'],
+  'B': ['DL GUNS', 'TOXNET B', 'PORBA JAYA B', 'PUTRA MANDIRI B', 'REMAJA PUTRA B'],
+  'C': ['GANESA A', 'REMAJA PUTRA C', 'PERU FC C', 'PERKID FC', 'PUTRA MANDIRI A'],
+  'D': ['LEMKA A', 'BALPAS FC', 'ARUMBA FC', 'GANESA B', 'PERU FC A', 'PELANA FC']
+};
+
 const Teams = () => {
   const navigate = useNavigate();
   const { teams, addTeam, addPlayer, deleteTeam, loading } = useTournament();
@@ -28,6 +36,29 @@ const Teams = () => {
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isInitializingTeams, setIsInitializingTeams] = useState(false);
+
+  // Fungsi untuk menginisialisasi tim
+  const initializeTeams = async () => {
+    setIsInitializingTeams(true);
+    try {
+      for (const [group, teamNames] of Object.entries(INITIAL_TEAMS)) {
+        for (const teamName of teamNames) {
+          await addTeam({
+            name: teamName,
+            group: group,
+            logo: '' // Logo akan ditambahkan nanti
+          });
+        }
+      }
+      setShowSuccessMessage(true);
+      setTimeout(() => setShowSuccessMessage(false), 3000);
+    } catch (error) {
+      setErrorMessage('Gagal menginisialisasi tim');
+      setTimeout(() => setErrorMessage(null), 3000);
+    }
+    setIsInitializingTeams(false);
+  };
 
   // Menampilkan pesan sukses ketika data berhasil diambil
   useEffect(() => {
@@ -45,7 +76,6 @@ const Teams = () => {
     
     setUploadingLogo(true);
     try {
-      // Kompres dan konversi file gambar ke base64
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.readAsDataURL(file);
@@ -55,12 +85,11 @@ const Teams = () => {
           img.src = reader.result as string;
           
           img.onload = () => {
-            // Kompres gambar
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
             
-            // Tentukan ukuran maksimum (300px untuk dimensi terpanjang)
-            const MAX_SIZE = 300;
+            // Ukuran maksimum yang lebih kecil (200px)
+            const MAX_SIZE = 200;
             let width = img.width;
             let height = img.height;
             
@@ -76,14 +105,29 @@ const Teams = () => {
               }
             }
             
+            // Pastikan ukuran minimum
+            const MIN_SIZE = 50;
+            if (width < MIN_SIZE) {
+              height = Math.round(height * (MIN_SIZE / width));
+              width = MIN_SIZE;
+            }
+            if (height < MIN_SIZE) {
+              width = Math.round(width * (MIN_SIZE / height));
+              height = MIN_SIZE;
+            }
+            
             canvas.width = width;
             canvas.height = height;
             
-            // Gambar ke canvas dengan ukuran yang sudah dikompres
-            ctx?.drawImage(img, 0, 0, width, height);
+            // Tambahkan background putih untuk gambar PNG transparan
+            if (ctx) {
+              ctx.fillStyle = '#FFFFFF';
+              ctx.fillRect(0, 0, width, height);
+              ctx.drawImage(img, 0, 0, width, height);
+            }
             
-            // Konversi ke base64 dengan kualitas 0.7 (70%)
-            const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+            // Kompresi yang lebih agresif (60%)
+            const compressedBase64 = canvas.toDataURL('image/jpeg', 0.6);
             
             setUploadingLogo(false);
             resolve(compressedBase64);
@@ -91,22 +135,22 @@ const Teams = () => {
           
           img.onerror = () => {
             console.error('Error loading image for compression');
-            alert('Gagal memproses logo. Silakan coba lagi.');
+            setErrorMessage('Gagal memproses logo. Silakan coba lagi.');
             setUploadingLogo(false);
             reject(null);
           };
         };
         
         reader.onerror = (error) => {
-          console.error('Error converting logo to base64:', error);
-          alert('Gagal memproses logo. Silakan coba lagi.');
+          console.error('Error reading file:', error);
+          setErrorMessage('Gagal membaca file logo. Silakan coba lagi.');
           setUploadingLogo(false);
           reject(null);
         };
       });
     } catch (error) {
-      console.error('Error handling logo:', error);
-      alert('Gagal memproses logo. Silakan coba lagi.');
+      console.error('Error in logo upload:', error);
+      setErrorMessage('Terjadi kesalahan saat mengunggah logo.');
       setUploadingLogo(false);
       return null;
     }
@@ -336,22 +380,36 @@ const Teams = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-green-800 flex items-center">
-            <Users className="w-8 h-8 mr-2" />
-            Manajemen Tim
-          </h1>
-          <p className="text-gray-600">Kelola tim dan pemain yang berpartisipasi di turnamen</p>
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold text-gray-800">Manajemen Tim</h1>
+        <div className="flex gap-2">
+          {teams.length === 0 && (
+            <button
+              onClick={initializeTeams}
+              disabled={isInitializingTeams}
+              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 disabled:bg-green-300 flex items-center gap-2"
+            >
+              {isInitializingTeams ? (
+                <>
+                  <Loader className="animate-spin" size={16} />
+                  <span>Menginisialisasi...</span>
+                </>
+              ) : (
+                <>
+                  <Plus size={16} />
+                  <span>Inisialisasi Tim</span>
+                </>
+              )}
+            </button>
+          )}
+          <button
+            onClick={() => setIsAddingTeam(true)}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
+          >
+            <Plus size={16} />
+            <span>Tambah Tim</span>
+          </button>
         </div>
-        
-        <button
-          onClick={() => setIsAddingTeam(true)}
-          className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors flex items-center"
-        >
-          <Plus className="w-5 h-5 mr-1" />
-          Tambah Tim
-        </button>
       </div>
       
       {/* Loading indicator */}
@@ -364,9 +422,27 @@ const Teams = () => {
 
       {/* Success message */}
       {showSuccessMessage && (
-        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-md flex items-center">
-          <Check className="w-5 h-5 mr-2" />
-          <span>Data tim berhasil dimuat dari Firestore!</span>
+        <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative flex items-center justify-between">
+          <div className="flex items-center">
+            <Check className="mr-2" size={20} />
+            <span>Data tim berhasil dimuat!</span>
+          </div>
+          <button onClick={() => setShowSuccessMessage(false)}>
+            <X size={20} />
+          </button>
+        </div>
+      )}
+      
+      {/* Error message */}
+      {errorMessage && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative flex items-center justify-between">
+          <div className="flex items-center">
+            <CircleAlert className="mr-2" size={20} />
+            <span>{errorMessage}</span>
+          </div>
+          <button onClick={() => setErrorMessage(null)}>
+            <X size={20} />
+          </button>
         </div>
       )}
       
