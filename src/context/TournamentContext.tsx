@@ -586,8 +586,11 @@ export const TournamentProvider = ({ children }: { children: any }) => {
       let currentDate = new Date(startDate);
       let currentSlotIndex = 0;
       
+      // Acak urutan grup untuk pemerataan jadwal
+      const shuffledGroups = shuffleArray(groups);
+      
       // Generate jadwal untuk setiap grup
-      for (const group of groups) {
+      for (const group of shuffledGroups) {
         const teamsInGroup = teams.filter(team => team.group === group);
         
         if (teamsInGroup.length < 2) continue;
@@ -595,20 +598,36 @@ export const TournamentProvider = ({ children }: { children: any }) => {
         // Generate round-robin matches untuk grup ini
         const groupMatches = generateRoundRobinSchedule(teamsInGroup, group);
         
+        // Acak urutan pertandingan dalam grup
+        const shuffledMatches = shuffleArray(groupMatches);
+        
         // Jadwalkan pertandingan
-        for (const [team1Id, team2Id] of groupMatches) {
-          // Cek apakah tim sudah bermain di hari yang sama
-          while (
-            isTeamPlayingOnDate({ id: team1Id } as Team, currentDate.toISOString().split('T')[0], allScheduledMatches) ||
-            isTeamPlayingOnDate({ id: team2Id } as Team, currentDate.toISOString().split('T')[0], allScheduledMatches)
-          ) {
-            // Jika sudah, pindah ke slot berikutnya atau hari berikutnya
-            if (currentSlotIndex >= MATCH_SLOTS.length - 1) {
-              currentDate.setDate(currentDate.getDate() + 1);
-              currentSlotIndex = 0;
+        for (const [team1Id, team2Id] of shuffledMatches) {
+          let validSlotFound = false;
+          let attempts = 0;
+          const maxAttempts = 10; // Batasi jumlah percobaan untuk mencegah infinite loop
+          
+          while (!validSlotFound && attempts < maxAttempts) {
+            // Cek apakah tim sudah bermain dalam 2 hari terakhir
+            if (!isTeamPlayingConsecutiveDays({ id: team1Id } as Team, currentDate.toISOString().split('T')[0], allScheduledMatches) &&
+                !isTeamPlayingConsecutiveDays({ id: team2Id } as Team, currentDate.toISOString().split('T')[0], allScheduledMatches)) {
+              validSlotFound = true;
             } else {
-              currentSlotIndex++;
+              // Coba slot waktu berikutnya atau hari berikutnya
+              if (currentSlotIndex >= MATCH_SLOTS.length - 1) {
+                currentDate.setDate(currentDate.getDate() + 1);
+                currentSlotIndex = 0;
+              } else {
+                currentSlotIndex++;
+              }
             }
+            attempts++;
+          }
+          
+          // Jika tidak menemukan slot yang valid, lanjut ke hari berikutnya
+          if (!validSlotFound) {
+            currentDate.setDate(currentDate.getDate() + 1);
+            currentSlotIndex = 0;
           }
           
           const match: Omit<Match, 'id' | 'goals' | 'cards'> = {
@@ -616,7 +635,7 @@ export const TournamentProvider = ({ children }: { children: any }) => {
             team2Id,
             date: currentDate.toISOString().split('T')[0],
             time: MATCH_SLOTS[currentSlotIndex].time,
-            venue: 'Lapangan KARTA',
+            venue: 'Lapangan Gelora Babakan Girihieum',
             group,
             round: 1,
             status: 'scheduled'
@@ -633,7 +652,7 @@ export const TournamentProvider = ({ children }: { children: any }) => {
           }
         }
         
-        // Tambah jeda satu hari setelah setiap grup selesai
+        // Tambah jeda satu hari setelah setiap grup selesai untuk memastikan istirahat yang cukup
         currentDate.setDate(currentDate.getDate() + 1);
         currentSlotIndex = 0;
       }
