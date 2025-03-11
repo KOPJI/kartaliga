@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTournament, Team } from '../context/TournamentContext';
-import { Pencil, Plus, Search, UserPlus, Users, X, Trash2, Loader, Check, CircleAlert } from 'lucide-react';
+import { Pencil, Plus, Search, UserPlus, Users, X, Trash2, Loader, Check, CircleAlert, SortAsc, SortDesc } from 'lucide-react';
 
 // Data tim per grup
 const INITIAL_TEAMS = {
@@ -37,6 +37,7 @@ const Teams = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isInitializingTeams, setIsInitializingTeams] = useState(false);
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
   // Fungsi untuk menginisialisasi tim
   const initializeTeams = async () => {
@@ -376,12 +377,29 @@ const Teams = () => {
     }
   };
 
-  // Filter teams based on search term and group filter
-  const filteredTeams = teams.filter(team => {
-    const matchesSearch = team.name ? team.name.toLowerCase().includes(searchTerm.toLowerCase()) : false;
-    const matchesGroup = filterGroup === null || team.group === filterGroup;
-    return matchesSearch && matchesGroup;
-  });
+  // Filter and sort teams based on search term, group filter, and sort order
+  const filteredAndSortedTeams = teams
+    .filter(team => {
+      const matchesSearch = team.name ? team.name.toLowerCase().includes(searchTerm.toLowerCase()) : false;
+      const matchesGroup = filterGroup === null || team.group === filterGroup;
+      return matchesSearch && matchesGroup;
+    })
+    .sort((a, b) => {
+      // Sort by name
+      const nameA = a.name?.toLowerCase() || '';
+      const nameB = b.name?.toLowerCase() || '';
+      
+      if (sortOrder === 'asc') {
+        return nameA.localeCompare(nameB);
+      } else {
+        return nameB.localeCompare(nameA);
+      }
+    });
+
+  // Toggle sort order
+  const toggleSortOrder = () => {
+    setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+  };
 
   // Count teams per group
   const groupCounts = teams.reduce((counts, team) => {
@@ -459,7 +477,7 @@ const Teams = () => {
         </div>
       )}
       
-      {/* Search and filter */}
+      {/* Search, filter, and sort */}
       <div className="bg-white p-4 rounded-lg shadow border border-gray-200">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="relative flex-1">
@@ -483,7 +501,7 @@ const Teams = () => {
             )}
           </div>
           
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <button
               onClick={() => setFilterGroup(null)}
               className={`px-3 py-1 rounded-md ${
@@ -508,6 +526,14 @@ const Teams = () => {
                 <span className="ml-1 text-xs">({groupCounts[group] || 0})</span>
               </button>
             ))}
+            
+            <button
+              onClick={toggleSortOrder}
+              className="px-3 py-1 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 flex items-center ml-auto"
+              title={sortOrder === 'asc' ? 'Urutkan A-Z' : 'Urutkan Z-A'}
+            >
+              Urut: {sortOrder === 'asc' ? 'A-Z' : 'Z-A'}
+            </button>
           </div>
         </div>
       </div>
@@ -838,7 +864,7 @@ const Teams = () => {
       
       {/* Team list */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredTeams.map((team) => (
+        {filteredAndSortedTeams.map((team) => (
           <div
             key={team.id}
             className="bg-white border border-gray-200 rounded-lg shadow hover:shadow-md transition-shadow p-4 relative"
@@ -893,7 +919,7 @@ const Teams = () => {
         ))}
       </div>
       
-      {loading && filteredTeams.length === 0 && (
+      {loading && filteredAndSortedTeams.length === 0 && (
         <div className="bg-white border border-gray-200 rounded-lg shadow p-8 text-center">
           <Loader className="h-12 w-12 text-green-500 mx-auto mb-4 animate-spin" />
           <h3 className="text-lg font-medium text-gray-700 mb-2">Memuat Data Tim</h3>
@@ -903,7 +929,7 @@ const Teams = () => {
         </div>
       )}
       
-      {!loading && filteredTeams.length === 0 && (
+      {!loading && filteredAndSortedTeams.length === 0 && (
         <div className="bg-white border border-gray-200 rounded-lg shadow p-8 text-center">
           <Users className="h-12 w-12 text-gray-300 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-700 mb-2">Tidak ada tim ditemukan</h3>
