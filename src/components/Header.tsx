@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ChevronDown, Menu, X, CircleAlert } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -13,7 +13,6 @@ const Header = () => {
     { path: '/matches', label: 'Pertandingan' },
     { path: '/standings', label: 'Klasemen' },
     { path: '/statistics', label: 'Statistik' },
-    { path: '/data-initialization', label: 'Inisialisasi Data', icon: <CircleAlert size={16} className="inline mr-1" /> },
   ];
 
   const toggleMenu = () => {
@@ -50,13 +49,12 @@ const Header = () => {
               <Link
                 key={item.path}
                 to={item.path}
-                className={`py-2 hover:text-green-200 transition-colors flex items-center ${
+                className={`py-2 hover:text-green-200 transition-colors ${
                   location.pathname === item.path
                     ? 'border-b-2 border-white font-semibold'
                     : ''
                 }`}
               >
-                {item.icon && item.icon}
                 {item.label}
               </Link>
             ))}
@@ -71,14 +69,13 @@ const Header = () => {
                 <li key={item.path}>
                   <Link
                     to={item.path}
-                    className={`block py-2 px-4 rounded flex items-center ${
+                    className={`block py-2 px-4 rounded ${
                       location.pathname === item.path
                         ? 'bg-green-700 font-semibold'
                         : 'hover:bg-green-700'
                     }`}
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    {item.icon && item.icon}
                     {item.label}
                   </Link>
                 </li>
