@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useTournament } from '../context/TournamentContext';
-import { Calendar, ChartBar, ListOrdered, Loader, Squircle, Trophy, Users } from 'lucide-react';
-import DataInitialization from '../components/DataInitialization';
+import { Calendar, ChartBar, ListOrdered, Loader, Squircle, Trophy, Users, User } from 'lucide-react';
 
 const Dashboard = () => {
   const { teams, matches, standings, topScorers, loading } = useTournament();
@@ -42,6 +41,12 @@ const Dashboard = () => {
 
   // Get upcoming matches (next 3)
   const upcomingMatches = scheduledMatches.slice(0, 3);
+
+  // Get teams with most players for showcase
+  const teamsWithPlayers = teams
+    .filter(team => team.players && team.players.length > 0)
+    .sort((a, b) => b.players.length - a.players.length)
+    .slice(0, 4);
 
   if (loading) {
     return (
@@ -188,8 +193,100 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Data Initialization Section */}
-      <DataInitialization />
+      {/* Team Players Showcase */}
+      <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-semibold flex items-center">
+            <User className="h-5 w-5 mr-2 text-green-600" />
+            Pemain Tim
+          </h2>
+          <Link to="/teams" className="text-sm text-blue-600 hover:underline">
+            Lihat Semua Tim
+          </Link>
+        </div>
+
+        {teamsWithPlayers.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {teamsWithPlayers.map(team => (
+              <div key={team.id} className="border rounded-lg overflow-hidden">
+                <div className="bg-green-700 text-white p-3 flex items-center">
+                  {team.logo ? (
+                    <img 
+                      src={team.logo} 
+                      alt={`Logo ${team.name}`} 
+                      className="w-8 h-8 mr-2 rounded-full object-cover bg-white"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 mr-2 rounded-full bg-white flex items-center justify-center text-green-700 font-bold">
+                      {team.name.charAt(0)}
+                    </div>
+                  )}
+                  <div>
+                    <h3 className="font-semibold">{team.name}</h3>
+                    <p className="text-xs text-green-100">Grup {team.group}</p>
+                  </div>
+                </div>
+                
+                <div className="p-3">
+                  <h4 className="text-sm font-medium text-gray-600 mb-2">Pemain ({team.players.length})</h4>
+                  <div className="space-y-3">
+                    {team.players.slice(0, 3).map(player => (
+                      <div key={player.id} className="flex items-center">
+                        {player.photo ? (
+                          <img 
+                            src={player.photo} 
+                            alt={player.name} 
+                            className="w-10 h-10 rounded-full object-cover mr-3 border border-gray-200"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center mr-3">
+                            <User className="h-5 w-5 text-gray-500" />
+                          </div>
+                        )}
+                        <div>
+                          <p className="font-medium text-gray-800">{player.name}</p>
+                          <p className="text-xs text-gray-500">
+                            #{player.number} · {player.position}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                    
+                    {team.players.length > 3 && (
+                      <Link 
+                        to={`/teams/${team.id}`} 
+                        className="text-xs text-blue-600 hover:underline block text-center mt-2"
+                      >
+                        Lihat {team.players.length - 3} pemain lainnya
+                      </Link>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="bg-gray-50 p-3 border-t">
+                  <Link 
+                    to={`/teams/${team.id}`} 
+                    className="text-sm text-blue-600 hover:underline flex justify-center items-center"
+                  >
+                    Detail Tim
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8 text-gray-500 border rounded-lg">
+            <Users className="h-12 w-12 mx-auto mb-2 text-gray-300" />
+            <p>Belum ada data pemain</p>
+            <Link
+              to="/teams"
+              className="mt-2 inline-block text-sm text-blue-600 hover:underline"
+            >
+              Tambahkan Pemain Sekarang
+            </Link>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
