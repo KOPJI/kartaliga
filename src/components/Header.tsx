@@ -30,7 +30,7 @@ const Header = () => {
               </div>
             </div>
             <div>
-              <h1 className="font-bold text-2xl">Karta Cup V</h1>
+              <h1 className="font-bold text-2xl">KARTA CUP V</h1>
               <p className="text-xs text-green-200">Turnamen Sepak Bola</p>
             </div>
           </Link>
