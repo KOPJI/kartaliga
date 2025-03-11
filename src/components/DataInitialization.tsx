@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useTournament } from '../context/TournamentContext';
-import { initializeTeamsToFirestore, initializePlayersToFirestore } from '../firebase/firestore';
-import { CircleAlert, Check, Loader } from 'lucide-react';
+import { initializeTeamsToFirestore, initializePlayersToFirestore, fetchTeams, fetchMatches } from '../firebase/firestore';
+import { CircleAlert, Check, Loader, ChartBar } from 'lucide-react';
 
 const DataInitialization = () => {
   const { teams } = useTournament();
   const [initializing, setInitializing] = useState(false);
   const [initializingPlayers, setInitializingPlayers] = useState(false);
+  const [fetching, setFetching] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,6 +44,25 @@ const DataInitialization = () => {
     }
   };
 
+  const handleFetchData = async () => {
+    setFetching(true);
+    setSuccess(null);
+    setError(null);
+    
+    try {
+      // Memuat ulang halaman untuk memicu useEffect di TournamentContext
+      // yang akan mengambil data dari Firestore
+      window.location.reload();
+      
+      setSuccess('Memuat ulang halaman untuk mengambil data terbaru dari Firestore');
+    } catch (err) {
+      console.error('Error fetching data:', err);
+      setError('Gagal mengambil data dari Firestore. Silakan coba lagi.');
+    } finally {
+      setFetching(false);
+    }
+  };
+
   return (
     <div className="mt-8 bg-white border border-gray-200 rounded-lg shadow p-6">
       <h2 className="text-xl font-semibold mb-4">Inisialisasi Data ke Firestore</h2>
@@ -65,7 +85,7 @@ const DataInitialization = () => {
         </div>
       )}
       
-      <div className="flex flex-col md:flex-row gap-3">
+      <div className="flex flex-col md:flex-row gap-3 mb-4">
         <button
           onClick={handleInitializeTeams}
           disabled={initializing}
@@ -93,6 +113,31 @@ const DataInitialization = () => {
             </>
           ) : (
             'Inisialisasi Data Pemain'
+          )}
+        </button>
+      </div>
+
+      <div className="border-t pt-4 mt-4">
+        <h3 className="font-medium mb-3">Ambil Data dari Firestore</h3>
+        <p className="mb-4 text-gray-700">
+          Ambil data tim, pemain, dan pertandingan dari database Firestore. Gunakan ini untuk memuat data yang telah tersimpan sebelumnya.
+        </p>
+        
+        <button
+          onClick={handleFetchData}
+          disabled={fetching}
+          className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors disabled:bg-purple-300 flex items-center justify-center"
+        >
+          {fetching ? (
+            <>
+              <Loader className="h-5 w-5 mr-2 animate-spin" />
+              Mengambil Data...
+            </>
+          ) : (
+            <>
+              <ChartBar className="h-5 w-5 mr-2" />
+              Ambil Data dari Firestore
+            </>
           )}
         </button>
       </div>
