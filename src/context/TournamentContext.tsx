@@ -89,6 +89,7 @@ interface TournamentContextType {
   updateTeam: (team: Team) => Promise<void>;
   deleteTeam: (teamId: string) => Promise<void>;
   getTeamById: (teamId: string) => Team | undefined;
+  setTeams: (teams: Team[]) => void;
   
   // Player functions
   addPlayer: (player: Omit<Player, 'id'>) => Promise<void>;
@@ -151,6 +152,7 @@ const initialContext: TournamentContextType = {
   updateTeam: async () => {},
   deleteTeam: async () => {},
   getTeamById: () => undefined,
+  setTeams: () => {},
   
   addPlayer: async () => {},
   updatePlayer: async () => {},
@@ -553,6 +555,7 @@ export const TournamentProvider = ({ children }: { children: any }) => {
     updateTeam,
     deleteTeam,
     getTeamById,
+    setTeams,
     
     addPlayer,
     updatePlayer,

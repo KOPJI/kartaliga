@@ -266,3 +266,30 @@ export const generateMatchScheduleInFirestore = async (matches: Omit<Match, 'id'
   
   await batch.commit();
 };
+
+// Clear all teams and related players from Firestore
+export const clearTeamsFromFirestore = async (): Promise<void> => {
+  // Get all teams
+  const teamsCollection = collection(db, COLLECTIONS.TEAMS);
+  const teamsSnapshot = await getDocs(teamsCollection);
+  
+  // Get all players
+  const playersCollection = collection(db, COLLECTIONS.PLAYERS);
+  const playersSnapshot = await getDocs(playersCollection);
+  
+  // Use batch to delete all teams and players
+  const batch = writeBatch(db);
+  
+  // Delete all teams
+  teamsSnapshot.docs.forEach(teamDoc => {
+    batch.delete(doc(db, COLLECTIONS.TEAMS, teamDoc.id));
+  });
+  
+  // Delete all players
+  playersSnapshot.docs.forEach(playerDoc => {
+    batch.delete(doc(db, COLLECTIONS.PLAYERS, playerDoc.id));
+  });
+  
+  // Commit the batch
+  await batch.commit();
+};

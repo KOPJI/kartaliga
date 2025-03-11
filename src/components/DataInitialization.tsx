@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { useTournament } from '../context/TournamentContext';
-import { initializeTeamsToFirestore, initializePlayersToFirestore, fetchTeams, fetchMatches } from '../firebase/firestore';
+import { initializeTeamsToFirestore, initializePlayersToFirestore, fetchTeams, fetchMatches, clearTeamsFromFirestore } from '../firebase/firestore';
 import { CircleAlert, Check, Loader, ChartBar } from 'lucide-react';
 
 const DataInitialization = () => {
-  const { teams } = useTournament();
+  const { teams, setTeams } = useTournament();
   const [initializing, setInitializing] = useState(false);
   const [initializingPlayers, setInitializingPlayers] = useState(false);
   const [fetching, setFetching] = useState(false);
+  const [clearing, setClearing] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -90,8 +91,44 @@ const DataInitialization = () => {
     }
   };
 
+  const handleClearTeams = async () => {
+    if (!window.confirm('PERINGATAN: Anda akan menghapus SEMUA data tim dari Firestore. Tindakan ini tidak dapat dibatalkan. Lanjutkan?')) {
+      return;
+    }
+    
+    setClearing(true);
+    setSuccess(null);
+    setError(null);
+    
+    try {
+      await clearTeamsFromFirestore();
+      setTeams([]);
+      setSuccess('Semua data tim berhasil dihapus dari Firestore');
+    } catch (err) {
+      console.error('Error clearing teams:', err);
+      setError('Gagal menghapus data tim. Silakan coba lagi.');
+    } finally {
+      setClearing(false);
+    }
+  };
+
   return (
     <div className="mt-8 bg-white border border-gray-200 rounded-lg shadow p-6">
+      <div className="mb-6 p-4 bg-red-100 border-2 border-red-500 rounded-lg">
+        <div className="flex items-start">
+          <CircleAlert className="h-6 w-6 text-red-600 mr-3 mt-1" />
+          <div>
+            <h3 className="text-lg font-bold text-red-600 mb-2">PERINGATAN !!</h3>
+            <p className="text-red-700">
+              Jangan Melakukan Tindakan Ini Kecuali Dengan Seizin Gema Pratama Yang Membuat Aplikasi ini.
+            </p>
+            <p className="text-red-700 font-semibold mt-2">
+              Konsultasikan Dahulu Dengan Gema Pratama Sebelum Anda Melakukan Tindakan Ini !!
+            </p>
+          </div>
+        </div>
+      </div>
+
       <h2 className="text-xl font-semibold mb-4">Inisialisasi Data ke Firestore</h2>
       
       <p className="mb-4 text-gray-700">
@@ -142,13 +179,6 @@ const DataInitialization = () => {
             'Inisialisasi Data Pemain'
           )}
         </button>
-      </div>
-
-      <div className="border-t pt-4 mt-4">
-        <h3 className="font-medium mb-3">Ambil Data dari Firestore</h3>
-        <p className="mb-4 text-gray-700">
-          Ambil data tim, pemain, dan pertandingan dari database Firestore. Gunakan ini untuk memuat data yang telah tersimpan sebelumnya.
-        </p>
         
         <button
           onClick={handleFetchData}
@@ -161,10 +191,22 @@ const DataInitialization = () => {
               Mengambil Data...
             </>
           ) : (
+            'Ambil Data dari Firestore'
+          )}
+        </button>
+        
+        <button
+          onClick={handleClearTeams}
+          disabled={clearing}
+          className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:bg-red-300 flex items-center justify-center"
+        >
+          {clearing ? (
             <>
-              <ChartBar className="h-5 w-5 mr-2" />
-              Ambil Data dari Firestore
+              <Loader className="h-5 w-5 mr-2 animate-spin" />
+              Menghapus...
             </>
+          ) : (
+            'Kosongkan Total Tim'
           )}
         </button>
       </div>

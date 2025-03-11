@@ -8,6 +8,8 @@ const Teams = () => {
   const { teams, addTeam, addPlayer, deleteTeam } = useTournament();
   const [isAddingTeam, setIsAddingTeam] = useState(false);
   const [newTeam, setNewTeam] = useState({ name: '', group: 'A', logo: '' });
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterGroup, setFilterGroup] = useState<string | null>(null);
   const [isAddingPlayer, setIsAddingPlayer] = useState(false);
@@ -21,7 +23,34 @@ const Teams = () => {
   const [teamToDelete, setTeamToDelete] = useState<Team | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const handleAddTeam = (e: React.FormEvent) => {
+  const handleLogoUpload = async (file: File) => {
+    if (!file) return;
+    
+    setUploadingLogo(true);
+    try {
+      // Konversi file gambar ke base64
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      
+      reader.onload = () => {
+        const base64Logo = reader.result as string;
+        setNewTeam({ ...newTeam, logo: base64Logo });
+        setUploadingLogo(false);
+      };
+      
+      reader.onerror = (error) => {
+        console.error('Error converting logo to base64:', error);
+        alert('Gagal memproses logo. Silakan coba lagi.');
+        setUploadingLogo(false);
+      };
+    } catch (error) {
+      console.error('Error handling logo:', error);
+      alert('Gagal memproses logo. Silakan coba lagi.');
+      setUploadingLogo(false);
+    }
+  };
+
+  const handleAddTeam = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (newTeam.name.trim() === '') {
@@ -29,14 +58,25 @@ const Teams = () => {
       return;
     }
     
-    addTeam({
-      name: newTeam.name,
-      group: newTeam.group,
-      logo: newTeam.logo
-    });
+    if (logoFile) {
+      await handleLogoUpload(logoFile);
+      return; // Fungsi akan dipanggil lagi setelah logo selesai diproses
+    }
     
-    setNewTeam({ name: '', group: 'A', logo: '' });
-    setIsAddingTeam(false);
+    try {
+      await addTeam({
+        name: newTeam.name,
+        group: newTeam.group,
+        logo: newTeam.logo
+      });
+      
+      setNewTeam({ name: '', group: 'A', logo: '' });
+      setLogoFile(null);
+      setIsAddingTeam(false);
+    } catch (error) {
+      console.error('Error adding team:', error);
+      alert('Gagal menambahkan tim. Silakan coba lagi.');
+    }
   };
 
   const handleAddPlayer = (e: React.FormEvent) => {
@@ -212,20 +252,43 @@ const Teams = () => {
               
               <div className="mb-4">
                 <label className="block text-gray-700 mb-2" htmlFor="team-logo">
-                  Logo Tim (URL)
+                  Logo Tim
                 </label>
                 <div className="flex gap-2">
-                  <input
-                    id="team-logo"
-                    type="text"
-                    className="w-full border border-gray-300 rounded-md p-2 focus:ring-green-500 focus:border-green-500"
-                    value={newTeam.logo}
-                    onChange={(e) => setNewTeam({ ...newTeam, logo: e.target.value })}
-                    placeholder="Masukkan URL logo tim"
-                  />
-                  {newTeam.logo && (
+                  <div className="flex-1">
+                    <label className="w-full flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md cursor-pointer hover:bg-gray-50">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            setLogoFile(file);
+                          }
+                        }}
+                      />
+                      <Plus className="h-5 w-5 mr-2" />
+                      {uploadingLogo ? 'Mengunggah...' : 'Pilih Logo'}
+                    </label>
+                  </div>
+                  {(logoFile || newTeam.logo) && (
                     <div className="w-10 h-10 border border-gray-300 rounded-md flex items-center justify-center overflow-hidden">
-                      <img src={newTeam.logo} alt="Preview" className="max-w-full max-h-full object-contain" />
+                      {logoFile ? (
+                        <img 
+                          src={URL.createObjectURL(logoFile)} 
+                          alt="Preview" 
+                          className="max-w-full max-h-full object-contain"
+                        />
+                      ) : (
+                        newTeam.logo && (
+                          <img 
+                            src={newTeam.logo} 
+                            alt="Preview" 
+                            className="max-w-full max-h-full object-contain" 
+                          />
+                        )
+                      )}
                     </div>
                   )}
                 </div>
@@ -259,8 +322,16 @@ const Teams = () => {
                 <button
                   type="submit"
                   className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                  disabled={uploadingLogo}
                 >
-                  Simpan
+                  {uploadingLogo ? (
+                    <>
+                      <Loader className="h-5 w-5 mr-2 animate-spin" />
+                      Mengunggah...
+                    </>
+                  ) : (
+                    'Simpan'
+                  )}
                 </button>
               </div>
             </form>
