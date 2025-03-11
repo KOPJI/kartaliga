@@ -159,8 +159,27 @@ const Standings = () => {
                   </span>
                   <span>Kualifikasi ke semifinal</span>
                 </div>
-                <div className="text-center mt-2">
-                  M = Menang, S = Seri, K = Kalah, GM = Gol Masuk, GK = Gol Kemasukan, SG = Selisih Gol
+                <div className="space-y-2 mt-3">
+                  <div>
+                    <strong className="font-semibold">Sistem Poin:</strong>
+                    <ul className="list-disc list-inside mt-1">
+                      <li>Menang: 3 poin</li>
+                      <li>Seri: 1 poin</li>
+                      <li>Kalah: 0 poin</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <strong className="font-semibold">Kriteria Penentu Posisi Tim:</strong>
+                    <ol className="list-decimal list-inside mt-1">
+                      <li>Jumlah Poin</li>
+                      <li>Selisih Gol</li>
+                      <li>Jumlah Gol Masuk</li>
+                      <li>Head-to-Head</li>
+                    </ol>
+                  </div>
+                  <div className="text-center mt-2">
+                    M = Menang, S = Seri, K = Kalah, GM = Gol Masuk, GK = Gol Kemasukan, SG = Selisih Gol
+                  </div>
                 </div>
               </div>
             </div>
