@@ -155,13 +155,20 @@ const isTeamPlayingConsecutiveDays = (
   date: string, 
   matches: Omit<Match, 'id' | 'goals' | 'cards'>[]
 ): boolean => {
-  const previousDay = addDays(date, -1);
-  const nextDay = addDays(date, 1);
+  // Periksa 2 hari sebelum dan 2 hari setelah untuk memberikan jarak yang lebih aman
+  const previousDays = [
+    addDays(date, -2),
+    addDays(date, -1)
+  ];
+  const nextDays = [
+    addDays(date, 1),
+    addDays(date, 2)
+  ];
   
   return (
-    isTeamPlayingOnDate(team, previousDay, matches) ||
+    previousDays.some(day => isTeamPlayingOnDate(team, day, matches)) ||
     isTeamPlayingOnDate(team, date, matches) ||
-    isTeamPlayingOnDate(team, nextDay, matches)
+    nextDays.some(day => isTeamPlayingOnDate(team, day, matches))
   );
 };
 
@@ -597,8 +604,12 @@ export const TournamentProvider = ({ children }: { children: any }) => {
         
         for (let round = 0; round < numRounds; round++) {
           console.log(`Menjadwalkan Ronde ${round + 1}`);
+          
+          // Reset slot waktu di awal setiap ronde
           let matchSlotIndex = 0;
           
+          // Acak urutan pertandingan dalam ronde untuk distribusi yang lebih baik
+          const matchPairs: Array<[Team, Team]> = [];
           for (let i = 0; i < matchesPerRound; i++) {
             const home = teamsForRotation[i];
             const away = teamsForRotation[numTeamsWithDummy - 1 - i];
