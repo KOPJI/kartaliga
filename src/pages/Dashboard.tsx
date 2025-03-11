@@ -1,46 +1,33 @@
 import { Link } from 'react-router-dom';
 import { useTournament } from '../context/TournamentContext';
-import { Calendar, ChartBar, ListOrdered, Loader, Squircle, Trophy, Users, User } from 'lucide-react';
+import { Calendar, ChartBar, ListOrdered, Loader, Squircle, Trophy, Users, User, CheckCircle, Shield, Plus } from 'lucide-react';
 
 const Dashboard = () => {
   const { teams, matches, standings, topScorers, loading } = useTournament();
   
   const completedMatches = matches.filter(match => match.status === 'completed');
-  const scheduledMatches = matches.filter(match => match.status === 'scheduled');
+  const upcomingMatches = matches.filter(match => match.status === 'scheduled').slice(0, 3);
   
-  const quickStats = [
-    { 
-      title: 'Total Tim', 
+  const stats = [
+    {
+      title: 'Total Tim',
       value: teams.length,
-      icon: <Users className="h-8 w-8 text-blue-600" />,
-      color: 'bg-blue-100 border-blue-200',
+      icon: Users,
       link: '/teams'
     },
-    { 
-      title: 'Pertandingan Selesai', 
+    {
+      title: 'Pertandingan Selesai',
       value: completedMatches.length,
-      icon: <Squircle className="h-8 w-8 text-orange-600" />,
-      color: 'bg-orange-100 border-orange-200',
+      icon: CheckCircle,
       link: '/matches'
     },
-    { 
-      title: 'Jadwal Mendatang', 
-      value: scheduledMatches.length,
-      icon: <Calendar className="h-8 w-8 text-purple-600" />,
-      color: 'bg-purple-100 border-purple-200',
-      link: '/schedule'
-    },
-    { 
-      title: 'Pencetak Gol Terbanyak', 
-      value: topScorers.length > 0 ? topScorers[0].goals || 0 : 0,
-      icon: <ChartBar className="h-8 w-8 text-green-600" />,
-      color: 'bg-green-100 border-green-200',
-      link: '/statistics'
-    },
+    {
+      title: 'Total Grup',
+      value: Object.keys(standings).length,
+      icon: Shield,
+      link: '/standings'
+    }
   ];
-
-  // Get upcoming matches (next 3)
-  const upcomingMatches = scheduledMatches.slice(0, 3);
 
   // Get teams with most players for showcase
   const teamsWithPlayers = teams
@@ -99,7 +86,7 @@ const Dashboard = () => {
 
       {/* Quick Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {quickStats.map((stat, index) => (
+        {stats.map((stat, index) => (
           <Link 
             key={index}
             to={stat.link}
@@ -147,50 +134,53 @@ const Dashboard = () => {
         </div>
 
         {/* Upcoming Matches */}
-        <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold flex items-center">
-              <Calendar className="h-5 w-5 mr-2 text-blue-500" />
-              Pertandingan Mendatang
-            </h2>
-            <Link to="/schedule" className="text-sm text-blue-600 hover:underline">
-              Lihat Semua
-            </Link>
-          </div>
-          
-          {upcomingMatches.length > 0 ? (
-            <div className="space-y-4">
-              {upcomingMatches.map((match) => {
+        {upcomingMatches.length > 0 ? (
+          <div className="bg-white rounded-lg shadow overflow-hidden">
+            <div className="p-4 bg-green-50 border-b border-gray-200">
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl font-semibold flex items-center">
+                  <Calendar className="h-6 w-6 mr-2 text-green-600" />
+                  Pertandingan Mendatang
+                </h2>
+                <Link to="/matches" className="text-sm text-blue-600 hover:underline">
+                  Lihat Semua
+                </Link>
+              </div>
+            </div>
+            
+            <div className="divide-y divide-gray-200">
+              {upcomingMatches.map(match => {
                 const homeTeam = teams.find(t => t.id === match.homeTeamId);
                 const awayTeam = teams.find(t => t.id === match.awayTeamId);
                 
                 return (
-                  <div key={match.id} className="border rounded-md p-3 hover:bg-gray-50">
-                    <div className="text-xs text-gray-500 mb-1">
-                      Grup {match.group} · {match.date || 'Jadwal belum diatur'}
+                  <div key={match.id} className="p-4 hover:bg-gray-50">
+                    <div className="text-sm text-gray-500 mb-2">
+                      Grup {match.group} · {match.date || 'Belum dijadwalkan'}
                     </div>
                     <div className="flex justify-between items-center">
                       <div className="font-medium">{homeTeam?.name || 'Tim tidak ditemukan'}</div>
-                      <div className="text-sm bg-gray-100 px-2 py-1 rounded">VS</div>
-                      <div className="font-medium text-right">{awayTeam?.name || 'Tim tidak ditemukan'}</div>
+                      <div className="px-3 py-1 bg-gray-100 rounded text-sm">VS</div>
+                      <div className="font-medium">{awayTeam?.name || 'Tim tidak ditemukan'}</div>
                     </div>
                   </div>
                 );
               })}
             </div>
-          ) : (
-            <div className="text-center py-8 text-gray-500">
-              <Calendar className="h-12 w-12 mx-auto mb-2 text-gray-300" />
-              <p>Belum ada jadwal pertandingan</p>
-              <Link
-                to="/schedule"
-                className="mt-2 inline-block text-sm text-blue-600 hover:underline"
-              >
-                Buat Jadwal Sekarang
-              </Link>
-            </div>
-          )}
-        </div>
+          </div>
+        ) : (
+          <div className="bg-white rounded-lg shadow p-6 text-center">
+            <Calendar className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+            <p>Belum ada pertandingan mendatang</p>
+            <Link
+              to="/matches"
+              className="mt-2 inline-flex items-center text-blue-600 hover:underline"
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              Lihat Pertandingan
+            </Link>
+          </div>
+        )}
       </div>
 
       {/* Team Players Showcase */}

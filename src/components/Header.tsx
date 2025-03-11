@@ -9,7 +9,6 @@ const Header = () => {
   const navItems = [
     { path: '/', label: 'Dashboard' },
     { path: '/teams', label: 'Tim' },
-    { path: '/schedule', label: 'Jadwal' },
     { path: '/matches', label: 'Pertandingan' },
     { path: '/standings', label: 'Klasemen' },
     { path: '/statistics', label: 'Statistik' },
