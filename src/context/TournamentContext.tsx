@@ -321,16 +321,6 @@ const generateRoundRobinSchedule = (teams: Team[], group: string): [string, stri
   return matches;
 };
 
-// Fungsi untuk mengacak array
-const shuffleArray = <T,>(array: T[]): T[] => {
-  const newArray = [...array];
-  for (let i = newArray.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
-  }
-  return newArray;
-};
-
 interface TournamentContextType {
   teams: Team[];
   matches: Match[];
@@ -586,11 +576,8 @@ export const TournamentProvider = ({ children }: { children: any }) => {
       let currentDate = new Date(startDate);
       let currentSlotIndex = 0;
       
-      // Acak urutan grup untuk pemerataan jadwal
-      const shuffledGroups = shuffleArray(groups);
-      
-      // Generate jadwal untuk setiap grup
-      for (const group of shuffledGroups) {
+      // Generate jadwal untuk setiap grup secara berurutan
+      for (const group of groups) {
         const teamsInGroup = teams.filter(team => team.group === group);
         
         if (teamsInGroup.length < 2) continue;
@@ -598,11 +585,8 @@ export const TournamentProvider = ({ children }: { children: any }) => {
         // Generate round-robin matches untuk grup ini
         const groupMatches = generateRoundRobinSchedule(teamsInGroup, group);
         
-        // Acak urutan pertandingan dalam grup
-        const shuffledMatches = shuffleArray(groupMatches);
-        
-        // Jadwalkan pertandingan
-        for (const [team1Id, team2Id] of shuffledMatches) {
+        // Jadwalkan pertandingan secara berurutan
+        for (const [team1Id, team2Id] of groupMatches) {
           let validSlotFound = false;
           let attempts = 0;
           const maxAttempts = 10; // Batasi jumlah percobaan untuk mencegah infinite loop
