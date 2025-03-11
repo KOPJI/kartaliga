@@ -97,14 +97,16 @@ const Teams = () => {
 
   // Filter teams based on search term and group filter
   const filteredTeams = teams.filter(team => {
-    const matchesSearch = team.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = team.name ? team.name.toLowerCase().includes(searchTerm.toLowerCase()) : false;
     const matchesGroup = filterGroup === null || team.group === filterGroup;
     return matchesSearch && matchesGroup;
   });
 
   // Count teams per group
   const groupCounts = teams.reduce((counts, team) => {
-    counts[team.group] = (counts[team.group] || 0) + 1;
+    if (team.group) {
+      counts[team.group] = (counts[team.group] || 0) + 1;
+    }
     return counts;
   }, {} as Record<string, number>);
 
@@ -368,10 +370,10 @@ const Teams = () => {
             
             <div className="mb-6">
               <p className="text-gray-700 mb-4">
-                Apakah Anda yakin ingin menghapus tim <strong>{teamToDelete.name}</strong>?
+                Apakah Anda yakin ingin menghapus tim <strong>{teamToDelete.name || 'Tim Tanpa Nama'}</strong>?
               </p>
               <p className="text-gray-700 mb-4">
-                Tindakan ini akan menghapus tim beserta {teamToDelete.players.length} pemain yang terdaftar. Data pertandingan yang terkait dengan tim ini juga akan terpengaruh.
+                Tindakan ini akan menghapus tim beserta {teamToDelete.players ? teamToDelete.players.length : 0} pemain yang terdaftar. Data pertandingan yang terkait dengan tim ini juga akan terpengaruh.
               </p>
               <p className="text-red-600 font-medium">
                 Tindakan ini tidak dapat dibatalkan.
@@ -427,17 +429,17 @@ const Teams = () => {
               <div className="flex justify-between items-start">
                 <div>
                   <div className="inline-block px-2 py-1 rounded-md bg-green-100 text-green-800 text-xs font-medium mb-2">
-                    Grup {team.group}
+                    Grup {team.group || 'N/A'}
                   </div>
                   {team.logo && (
                     <div className="w-10 h-10 mb-2 overflow-hidden">
-                      <img src={team.logo} alt={team.name} className="w-full h-full object-contain" />
+                      <img src={team.logo} alt={team.name || 'Tim'} className="w-full h-full object-contain" />
                     </div>
                   )}
-                  <h3 className="text-lg font-semibold">{team.name}</h3>
+                  <h3 className="text-lg font-semibold">{team.name || 'Tim Tanpa Nama'}</h3>
                   <div className="flex items-center mt-2 text-gray-500 text-sm">
                     <Users className="h-4 w-4 mr-1" />
-                    <span>{team.players.length} Pemain</span>
+                    <span>{team.players ? team.players.length : 0} Pemain</span>
                   </div>
                 </div>
               </div>
