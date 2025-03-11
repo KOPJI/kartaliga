@@ -309,8 +309,8 @@ const canScheduleMatch = (
   const homeTeamStats = calculateTeamStats(homeTeam, existingMatches);
   const awayTeamStats = calculateTeamStats(awayTeam, existingMatches);
   
-  // Pastikan perbedaan hari istirahat tidak terlalu besar
-  if (Math.abs(homeTeamStats.averageRestDays - awayTeamStats.averageRestDays) > 2) {
+  // Tingkatkan toleransi perbedaan hari istirahat menjadi 3
+  if (Math.abs(homeTeamStats.averageRestDays - awayTeamStats.averageRestDays) > 3) {
     return false;
   }
   
@@ -592,6 +592,7 @@ export const TournamentProvider = ({ children }: { children: any }) => {
         
         console.log(`Total ${numRounds} ronde dengan ${matchesPerRound} pertandingan per ronde`);
         
+        // Buat salinan array tim untuk rotasi
         const teamsForRotation = [...teamsForScheduling];
         
         for (let round = 0; round < numRounds; round++) {
@@ -608,7 +609,8 @@ export const TournamentProvider = ({ children }: { children: any }) => {
             
             let scheduled = false;
             let attempts = 0;
-            const maxAttempts = MATCH_SLOTS.length * 14; // Coba selama 14 hari
+            // Tingkatkan jumlah percobaan maksimum menjadi 100
+            const maxAttempts = 100;
             
             while (!scheduled && attempts < maxAttempts) {
               if (canScheduleMatch(home, away, currentDate, MATCH_SLOTS[matchSlotIndex].time, matchesToCreate)) {
@@ -625,34 +627,29 @@ export const TournamentProvider = ({ children }: { children: any }) => {
                   status: 'scheduled' as const
                 };
                 
-                // Validasi jadwal sebelum menambahkan pertandingan baru
-                const tempMatches = [...matchesToCreate, newMatch];
-                const validation = validateSchedule(tempMatches, teams);
-                
-                if (validation.isValid) {
-                  matchesToCreate.push(newMatch);
-                  scheduled = true;
-                  console.log(`Berhasil menjadwalkan: ${home.name} vs ${away.name}`);
-                }
+                matchesToCreate.push(newMatch);
+                scheduled = true;
+                console.log(`Berhasil menjadwalkan: ${home.name} vs ${away.name}`);
               }
               
               attempts++;
               matchSlotIndex = (matchSlotIndex + 1) % MATCH_SLOTS.length;
               if (matchSlotIndex === 0) {
+                // Tambahkan 1 hari jika semua slot waktu sudah dicoba
                 currentDate = addDays(currentDate, 1);
               }
             }
             
             if (!scheduled) {
-              throw new Error(`Tidak dapat menjadwalkan pertandingan antara ${home.name} dan ${away.name} setelah ${maxAttempts} percobaan`);
+              throw new Error(`Tidak dapat menjadwalkan pertandingan antara ${home.name} dan ${away.name} setelah ${maxAttempts} percobaan. Silakan coba lagi dengan pengaturan yang berbeda.`);
             }
           }
           
-          // Rotasi tim untuk ronde berikutnya
+          // Rotasi tim untuk ronde berikutnya (metode circle)
           const lastTeam = teamsForRotation.pop()!;
           teamsForRotation.splice(1, 0, lastTeam);
           
-          // Tambah hari istirahat antara ronde
+          // Tambah 2 hari istirahat antara ronde
           currentDate = addDays(currentDate, 2);
         }
       }
